@@ -23,6 +23,7 @@ dependencies = [
     "httpx>=0.28.0",
     "bcrypt>=4.2.0",
     "cryptography>=44.0.0",
+    "sqlglot>=25.0.0",
 ]
 
 [project.optional-dependencies]

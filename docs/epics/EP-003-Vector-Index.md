@@ -26,15 +26,17 @@ Implement the vector index store for semantic search over schemas, queries, and 
 
 ## Tasks
 
-| ID | Name | P | Deps | Est |
-|----|------|---|------|-----|
-| TASK-016 | Setup Qdrant client and connection pool | P0 | TASK-001 | M |
-| TASK-017 | Implement BGE-M3 embedding service | P0 | TASK-001 | L |
-| TASK-018 | Define vector point schemas (payload models) | P0 | TASK-016 | M |
-| TASK-019 | Implement Qdrant CRUD repository | P0 | TASK-016 | L |
-| TASK-020 | Implement per-tenant collection management | P0 | TASK-019 | M |
-| TASK-021 | Implement hybrid search with score fusion | P1 | TASK-019 | L |
-| TASK-022 | Write unit and integration tests | P0 | TASK-019 | L |
+| ID | Name | P | Deps | Est | Status |
+|----|------|---|------|-----|--------|
+| TASK-016 | Setup Qdrant client and connection pool | P0 | TASK-001 | M | done |
+| TASK-017 | Implement BGE-M3 embedding service | P0 | TASK-001 | L | done |
+| TASK-018 | Define vector point schemas (payload models) | P0 | TASK-016 | M | done |
+| TASK-019 | Implement Qdrant CRUD repository | P0 | TASK-016 | L | done |
+| TASK-020 | Implement per-tenant collection management | P0 | TASK-019 | M | done |
+| TASK-021 | Implement hybrid search with score fusion | P1 | TASK-019 | L | done |
+| TASK-022 | Write unit and integration tests | P0 | TASK-019 | L | done |
+
+## Status: ✅ Complete
 
 ## Key Design Decisions
 - 1024-dim BGE-M3 embeddings (dense) + SPLADE sparse vectors for hybrid search

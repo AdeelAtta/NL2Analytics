@@ -30,12 +30,14 @@ Implement the Schema Store — the primary knowledge store for database schemas 
 | ID | Name | P | Deps | Est | Status |
 |----|------|---|------|-----|--------|
 | TASK-009 | Define schema store data models (Pydantic) | P0 | TASK-008 | M | done |
-| TASK-010 | Create Alembic migration for schema store tables | P0 | TASK-009 | M | ready |
-| TASK-011 | Implement schema store CRUD repository | P0 | TASK-010 | XL | backlog |
-| TASK-012 | Implement schema versioning logic | P0 | TASK-011 | L | backlog |
-| TASK-013 | Add RLS policies for multi-tenant isolation | P0 | TASK-011 | M | backlog |
-| TASK-014 | Write unit tests for schema store | P0 | TASK-011 | L | backlog |
-| TASK-015 | Write integration tests for schema store | P0 | TASK-011 | L | backlog |
+| TASK-010 | Create Alembic migration for schema store tables | P0 | TASK-009 | M | done |
+| TASK-011 | Implement schema store CRUD repository | P0 | TASK-010 | XL | done |
+| TASK-012 | Implement schema versioning logic | P0 | TASK-011 | L | done |
+| TASK-013 | Add RLS policies for multi-tenant isolation | P0 | TASK-011 | M | done |
+| TASK-014 | Write unit tests for schema store | P0 | TASK-011 | L | done |
+| TASK-015 | Write integration tests for schema store | P0 | TASK-011 | L | deferred |
+
+## Status: ✅ Complete (6/7 done, 1 deferred)
 
 ## Key Entities
 - **Tenant**: id, name, slug, created_at

@@ -161,7 +161,9 @@ class TestPagination:
         assert params.page_size == 50
         assert params.offset == 0
 
-    async def test_list_respects_pagination(self, mock_session: AsyncMock, mock_result: MagicMock) -> None:
+    async def test_list_respects_pagination(
+        self, mock_session: AsyncMock, mock_result: MagicMock
+    ) -> None:
         mock_result.scalar.return_value = 0
         repo = TenantRepository(session=mock_session)
         pagination = PaginationParams(page=2, page_size=10)
@@ -169,14 +171,18 @@ class TestPagination:
         assert items == []
         assert total == 0
 
-    async def test_list_with_filters(self, mock_session: AsyncMock, mock_result: MagicMock) -> None:
+    async def test_list_with_filters(
+        self, mock_session: AsyncMock, mock_result: MagicMock
+    ) -> None:
         mock_result.scalar.return_value = 0
         repo = TenantRepository(session=mock_session)
         items, total = await repo.list(filters={"tier": "enterprise"})
         assert items == []
         assert total == 0
 
-    async def test_list_filters_deleted_at(self, mock_session: AsyncMock, mock_result: MagicMock) -> None:
+    async def test_list_filters_deleted_at(
+        self, mock_session: AsyncMock, mock_result: MagicMock
+    ) -> None:
         mock_result.scalar.return_value = 0
         repo = TenantRepository(session=mock_session)
         items, total = await repo.list()

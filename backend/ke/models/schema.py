@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
+from enum import Enum
 from typing import Annotated, Any, Literal
 
 from pydantic import Field, field_validator
@@ -135,3 +136,33 @@ class Relationship(BaseSchema):
             msg = f"Confidence must be between 0.0 and 1.0, got {v}"
             raise ValueError(msg)
         return v
+
+
+class SchemaChangeType(str, Enum):
+    TABLE_ADDED = "TABLE_ADDED"
+    TABLE_DROPPED = "TABLE_DROPPED"
+    COLUMN_ADDED = "COLUMN_ADDED"
+    COLUMN_DROPPED = "COLUMN_DROPPED"
+    COLUMN_RENAMED = "COLUMN_RENAMED"
+    COLUMN_TYPE_CHANGED = "COLUMN_TYPE_CHANGED"
+    COLUMN_NULLABLE_CHANGED = "COLUMN_NULLABLE_CHANGED"
+    RELATIONSHIP_ADDED = "RELATIONSHIP_ADDED"
+    RELATIONSHIP_DROPPED = "RELATIONSHIP_DROPPED"
+
+
+class SchemaChange(BaseSchema):
+    change_type: SchemaChangeType
+    object_name: str
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
+class SchemaVersion(BaseSchema):
+    model_config = {"from_attributes": True}
+
+    id: UUIDStr
+    schema_id: UUIDStr
+    version: int
+    changes: list[SchemaChange] = Field(default_factory=list)
+    ddl_snapshot: str | None = None
+    triggered_by: str = "connector"
+    created_at: datetime

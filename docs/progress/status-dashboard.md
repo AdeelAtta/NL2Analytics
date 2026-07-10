@@ -4,7 +4,7 @@
 |----------|-------|
 | **Phase** | 3 (Planning) + 3.5 (Readiness Review) + Sprint 0 (Engineering Foundation) |
 | **Last Updated** | 2026-07-10 |
-| **Overall Status** | 🚀 **IMPLEMENTATION ACTIVE** — Sprint 0 Complete, EP-001 Complete, TASK-009 Unblocked |
+| **Overall Status** | 🚀 **IMPLEMENTATION ACTIVE** — EP-001/EP-002/EP-003 Complete |
 | **Total Epics** | 17 |
 | **Total Tasks** | ~144 (12 documented, ~132 generated from epic task lists) |
 | **Planned Agents** | 7 |
@@ -17,8 +17,8 @@
 | ID | Epic | Tasks Total | Tasks Documented | Status | Agent |
 |----|------|------------|-----------------|--------|-------|
 | EP-001 | Dev Environment & Monorepo | 8 | TASK-001 to TASK-008 | ✅ Complete | Infrastructure |
-| EP-002 | KE — Schema Store | 7 | TASK-009 to TASK-015 | 🚧 In Progress | Knowledge Engine |
-| EP-003 | KE — Vector Index | 7 | TASK-016 to TASK-022 | ✅ Planned | Knowledge Engine |
+| EP-002 | KE — Schema Store | 7 | TASK-009 to TASK-015 | ✅ Complete | Knowledge Engine |
+| EP-003 | KE — Vector Index | 7 | TASK-016 to TASK-022 | ✅ Complete | Knowledge Engine |
 | EP-004 | KE — Knowledge Graph | 6 | TASK-023 to TASK-028 | ✅ Planned | Knowledge Engine |
 | EP-005 | KE — API Layer | 14 | TASK-029 to TASK-042 | ✅ Planned | Knowledge Engine |
 | EP-006 | Schema Intelligence | 13 | TASK-043 to TASK-055 | ✅ Planned | Schema Intelligence |
@@ -122,3 +122,10 @@
 | TASK-008 (Shared Models) | 2026-07-10 | BaseSchema, TimestampMixin, TenantScopedModel, APIResponse, PaginationParams. 34 tests passing, ruff/mypy clean |
 | TASK-001 through TASK-007 | 2026-07-10 | Statuses updated from `backlog` to `done` to reflect Sprint 0 completion |
 | TASK-009 (Schema Store Models) | 2026-07-10 | All 6 entity models (Tenant, DatabaseConfig, SchemaInfo, Table, Column, Relationship). 50 tests passing, ruff/mypy clean |
+| TASK-010 (Alembic Migration) | 2026-07-10 | `001_create_schema_store.py` — 6 tables, indexes, FKs, RLS. SQL verified via `--sql` offline mode |
+| TASK-011 (CRUD Repository) | 2026-07-10 | Generic `BaseRepository[T]` + 6 repositories. 18 tests passing. Ruff clean. |
+| TASK-012 (Schema Versioning) | 2026-07-11 | `VersioningService` with DDL diff, `schema_versions` migration, 18 tests passing. Ruff clean. |
+| TASK-013 (RLS Policies) | 2026-07-11 | Already implemented in migrations 001 + 002 — verified, no new code needed. |
+| TASK-014 (Unit Tests) | 2026-07-11 | 86 schema store tests total (50 models + 18 repo + 18 versioning). All pass. |
+| EP-002 (Schema Store) | 2026-07-11 | **Epic complete** — 6/7 tasks done, TASK-015 deferred (needs PostgreSQL). 126 total tests passing. |
+| EP-003 (Vector Index) | 2026-07-11 | **Epic complete** — All 7 tasks done. Vector models, embedding service, Qdrant CRUD, hybrid search. 33 tests. |

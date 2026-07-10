@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from ke.models.vector import (
     HybridSearchParams,
-    SparseVector,
     VectorPayload,
     VectorPoint,
 )
 from ke.stores.vector.repository import (
     VectorRepository,
     _build_filter,
-    _point_to_search_result,
     _tenant_collection_name,
 )
 
@@ -105,7 +103,7 @@ class TestVectorRepository:
     async def test_upsert_points(
         self, repo: VectorRepository, mock_client: AsyncMock
     ) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         points = [
             VectorPoint(
                 id="pt1",

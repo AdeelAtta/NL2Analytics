@@ -51,6 +51,10 @@ class EmbeddingService:
             normalized=True,
         )
 
+    async def embed_text(self, text: str) -> EmbeddingResult:
+        item = EmbeddingItem(id=_cache_key(text), text=text, source_id="_search")
+        return await self.embed(item)
+
     def clear_cache(self) -> None:
         self._cache.clear()
 

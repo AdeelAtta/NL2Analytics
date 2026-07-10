@@ -20,14 +20,14 @@ Implement the knowledge graph layer — a recursive CTE-driven graph stored in P
 
 ## Tasks
 
-| ID | Name | P | Deps | Est |
-|----|------|---|---|-----|
-| TASK-023 | Design and create graph store data models | P0 | TASK-009 | M |
-| TASK-024 | Implement graph node CRUD repository | P0 | TASK-023 | L |
-| TASK-025 | Implement graph edge CRUD repository | P0 | TASK-023 | L |
-| TASK-026 | Implement recursive CTE traversal queries | P1 | TASK-024 | XL |
-| TASK-027 | Build ontology import/export service | P1 | TASK-024 | M |
-| TASK-028 | Write unit and integration tests | P0 | TASK-024 | L |
+| ID | Name | P | Deps | Est | Status |
+|----|------|---|---|-----|--------|
+| TASK-023 | Design and create graph store data models | P0 | TASK-009 | M | ✅ Done |
+| TASK-024 | Implement graph node CRUD repository | P0 | TASK-023 | L | ✅ Done |
+| TASK-025 | Implement graph edge CRUD repository | P0 | TASK-023 | L | ✅ Done |
+| TASK-026 | Implement recursive CTE traversal queries | P1 | TASK-024 | XL | ✅ Done |
+| TASK-027 | Build ontology import/export service | P1 | TASK-024 | M | ✅ Done |
+| TASK-028 | Write unit and integration tests | P0 | TASK-024 | L | ✅ Done |
 
 ## Key Design Decisions
 - Graph stored as `graph_nodes` and `graph_edges` tables

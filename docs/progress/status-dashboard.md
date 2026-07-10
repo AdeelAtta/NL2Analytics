@@ -3,8 +3,8 @@
 | Metadata | Value |
 |----------|-------|
 | **Phase** | 3 (Planning) + 3.5 (Readiness Review) + Sprint 0 (Engineering Foundation) |
-| **Last Updated** | 2026-07-10 |
-| **Overall Status** | 🚀 **IMPLEMENTATION ACTIVE** — EP-001/EP-002/EP-003 Complete |
+| **Last Updated** | 2026-07-11 |
+| **Overall Status** | 🚀 **IMPLEMENTATION ACTIVE** — EP-001/EP-002/EP-003/EP-004 Complete, EP-005 8/14, EP-006 8/13 |
 | **Total Epics** | 17 |
 | **Total Tasks** | ~144 (12 documented, ~132 generated from epic task lists) |
 | **Planned Agents** | 7 |
@@ -19,9 +19,9 @@
 | EP-001 | Dev Environment & Monorepo | 8 | TASK-001 to TASK-008 | ✅ Complete | Infrastructure |
 | EP-002 | KE — Schema Store | 7 | TASK-009 to TASK-015 | ✅ Complete | Knowledge Engine |
 | EP-003 | KE — Vector Index | 7 | TASK-016 to TASK-022 | ✅ Complete | Knowledge Engine |
-| EP-004 | KE — Knowledge Graph | 6 | TASK-023 to TASK-028 | ✅ Planned | Knowledge Engine |
-| EP-005 | KE — API Layer | 14 | TASK-029 to TASK-042 | ✅ Planned | Knowledge Engine |
-| EP-006 | Schema Intelligence | 13 | TASK-043 to TASK-055 | ✅ Planned | Schema Intelligence |
+| EP-004 | KE — Knowledge Graph | 6 | TASK-023 to TASK-028 | ✅ Complete | Knowledge Engine |
+| EP-005 | KE — API Layer | 14 | TASK-029 to TASK-042 | 🏗️ In Progress | Knowledge Engine |
+| EP-006 | Schema Intelligence | 13 | TASK-043 to TASK-055 | 🏗️ In Progress (8/13) | Schema Intelligence |
 | EP-007 | Context Retrieval | 6 | TASK-056 to TASK-061 | ✅ Planned | Query Pipeline |
 | EP-008 | Intent & Planning | 5 | TASK-062 to TASK-066 | ✅ Planned | Query Pipeline |
 | EP-009 | NL2SQL Generation | 12 | TASK-067 to TASK-078 | ✅ Planned | Query Pipeline |
@@ -129,3 +129,20 @@
 | TASK-014 (Unit Tests) | 2026-07-11 | 86 schema store tests total (50 models + 18 repo + 18 versioning). All pass. |
 | EP-002 (Schema Store) | 2026-07-11 | **Epic complete** — 6/7 tasks done, TASK-015 deferred (needs PostgreSQL). 126 total tests passing. |
 | EP-003 (Vector Index) | 2026-07-11 | **Epic complete** — All 7 tasks done. Vector models, embedding service, Qdrant CRUD, hybrid search. 33 tests. |
+| EP-005 (KE API) TASK-029–034 | 2026-07-11 | KE API scaffolded: FastAPI app factory, unified response format (KEResponse/KEListResponse), tenant middleware, service auth middleware, all schema store routes (6 entities), all vector index routes (collections + points CRUD), 28 passing tests. |
+| EP-005 (KE API) TASK-042 | 2026-07-11 | 45 integration tests (test_api.py + test_api_comprehensive.py) — auth, schema CRUD, vector ops, pagination, response format, OpenAPI completeness. All pass. |
+| EP-004 TASK-023 (Graph Models) | 2026-07-11 | GraphNode, GraphEdge, GraphPath, OntologyImport, OntologyExport Pydantic models. Ruff clean. |
+| EP-004 TASK-024/025 (Graph Repositories) | 2026-07-11 | GraphNodeOrm/GraphEdgeOrm ORM classes. GraphNodeRepository + GraphEdgeRepository with CRUD + recursive CTE traverse(). Ruff clean. |
+| EP-004 TASK-026 (Traversal) | 2026-07-11 | WITH RECURSIVE CTE built into GraphEdgeRepository.traverse(). Max depth 5, edge type filtering, cycle detection. |
+| EP-004 TASK-028 (Tests) | 2026-07-11 | 53 tests: 24 model tests (GraphNode, GraphEdge, GraphPath, OntologyImport/Export), 9 ORM tests, 20 repository tests (CRUD + traverse). All pass, ruff clean. |
+| Alembic migration 003 | 2026-07-11 | graph_store schema — graph_nodes + graph_edges tables, indexes (including trigram on name), FKs, check constraints, RLS policies. |
+| KE API graph routes | 2026-07-11 | Full CRUD for nodes/edges, POST /traverse, wired at /v1/ke/graph in main.py. Ruff clean. |
+| EP-004 TASK-027 (Ontology Service) | 2026-07-11 | OntologyService — import (merge/replace) + export (JSON/YAML) with node_id mapping. 7 service tests, ruff clean. |
+| EP-004 (Knowledge Graph) | 2026-07-11 | **Epic complete** — All 6 tasks done. 60 graph tests (53 repo+models, 7 service). |
+| EP-006 TASK-043 (Connector Interface) | 2026-07-11 | BaseConnector ABC, 6 dataclasses (ConnectorConfig, ExtractedColumn, ExtractedTable, ExtractedSchemaInfo, ExtractedSchema, ForeignKeyRef), ConnectorRegistry. 16 tests, ruff clean. |
+| EP-006 TASK-044 (PostgreSQL Connector) | 2026-07-11 | PostgreSQLConnector with asyncpg + raw information_schema queries. Full schema extraction (schemas, tables, columns, PKs, FKs, comments, row estimates). 11 tests, ruff clean. |
+| EP-006 TASK-049 (DDL Parser) | 2026-07-11 | DDLParser with sqlglot — extracts tables, columns, types, PK/FK/NOT NULL/DEFAULT/comments from CREATE TABLE + COMMENT ON statements. 30 tests, ruff clean. |
+| EP-006 TASK-050 (LLM Annotator) | 2026-07-11 | BaseAnnotator ABC, RuleBasedAnnotator (50+ column name patterns + 8 table patterns), LLMAnnotator (OpenAI-compatible HTTP with retries), AnnotationService (caching, batch, fallback). 36 tests, ruff clean. |
+| EP-006 TASK-051 (Relationship Inference) | 2026-07-11 | NameBasedInferenceEngine with 3 strategies (naming 0.7, reverse 0.5, overlap 0.3) + self-reference (0.9) + junction (0.8) + score fusion. RelationshipInferenceService wrapper. 32 tests, 389 total pass. |
+| EP-006 TASK-052 (Sync Orchestrator) | 2026-07-11 | SyncOrchestrator: connects to DB, extracts schema, computes table signatures (DDL or column-based), detects added/changed/removed/unchanged tables, runs annotation + inference pipeline on changed tables, tracks SyncState across calls. 40 tests, 429 total pass. |
+| EP-006 TASK-053 (Schema Embedding Pipeline) | 2026-07-11 | SchemaEmbeddingPipeline: bridges schema_intelligence to KE vector store. Converts ExtractedTable + AnnotationResult + InferredRelationship → EmbeddingItems → embeddings → VectorPoints → Qdrant upsert. Handles ADDED/CHANGED (upsert) and REMOVED (delete). Tenant-isolated point IDs. 39 tests, 468 total pass. |

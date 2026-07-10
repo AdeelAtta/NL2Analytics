@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ke.models.vector import (
     EmbeddingItem,
@@ -32,7 +32,7 @@ def test_embedding_result_defaults() -> None:
 
 
 def test_vector_payload_requires_tenant_id() -> None:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = VectorPayload(
         tenant_id="tnt_1",
         content_type="schema_element",
@@ -45,7 +45,7 @@ def test_vector_payload_requires_tenant_id() -> None:
 
 
 def test_vector_point_round_trip() -> None:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = VectorPayload(
         tenant_id="tnt_1",
         content_type="query_pattern",
@@ -66,7 +66,7 @@ def test_vector_point_round_trip() -> None:
 
 
 def test_search_result_defaults() -> None:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = VectorPayload(
         tenant_id="tnt_1",
         content_type="schema_element",

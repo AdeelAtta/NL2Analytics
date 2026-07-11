@@ -51,7 +51,11 @@ async def execute_query(
         dry_run=dry_run,
     )
 
-    return _pipeline_to_response(result)
+    resp = _pipeline_to_response(result)
+    from ke.services.explain import explain_sql, extract_columns
+    resp["explanation"] = explain_sql(result.sql or "", result.query)
+    resp["columns"] = extract_columns(result.sql or "")
+    return resp
 
 
 def _pipeline_to_response(result: PipelineResult) -> dict[str, Any]:

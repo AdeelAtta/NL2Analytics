@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryStore } from "@/stores/query";
+import { useUIStore } from "@/stores/ui";
 import { apiGet } from "@/lib/api";
+import { Input } from "@/components/ui/input";
+import { X, Search } from "lucide-react";
 
 interface HistoryItem {
   id: string; query: string; sql: string; status: string;
@@ -11,34 +14,63 @@ interface HistoryItem {
 
 export function HistorySidebar() {
   const setQuery = useQueryStore((s) => s.setQuery);
+  const addToast = useUIStore((s) => s.addToast);
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
-    apiGet<{ data: HistoryItem[] }>("/history?page_size=20").then((d) => {
+    apiGet<{ data: HistoryItem[] }>("/history?page_size=50").then((d) => {
       if (d) setItems(d.data ?? []);
     });
   }, []);
+
+  const filtered = useMemo(() => {
+    if (!search) return items;
+    const q = search.toLowerCase();
+    return items.filter(
+      (i) => i.query.toLowerCase().includes(q) || i.sql.toLowerCase().includes(q)
+    );
+  }, [items, search]);
+
+  const handleClick = (q: string) => {
+    setQuery(q);
+    addToast(`Loaded: "${q}"`, "info");
+  };
 
   return (
     <>
       <button
         onClick={() => setOpen(!open)}
         className="fixed right-4 top-4 z-50 rounded-full bg-primary p-2 text-primary-foreground shadow-lg text-xs"
+        aria-label="Toggle history"
       >
-        {open ? "Close" : "History"}
+        {open ? <X className="h-4 w-4" /> : "History"}
       </button>
       {open && (
         <div className="fixed right-0 top-14 z-40 h-[calc(100vh-3.5rem)] w-80 border-l bg-background p-4 shadow-lg overflow-y-auto">
-          <h3 className="mb-3 text-sm font-semibold">Query History</h3>
-          {items.length === 0 && (
-            <p className="text-sm text-muted-foreground">No queries yet</p>
+          <div className="mb-3 flex items-center gap-2">
+            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Input
+              placeholder="Search queries..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 text-sm"
+            />
+          </div>
+          <h3 className="mb-3 text-sm font-semibold">
+            {search ? `${filtered.length} results` : "Query History"}
+          </h3>
+          {filtered.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              {search ? "No matching queries" : "No queries yet"}
+            </p>
           )}
           <div className="space-y-2">
-            {items.map((item) => (
+            {filtered.map((item) => (
               <button
                 key={item.id}
-                onClick={() => { setQuery(item.query); setOpen(false); }}
+                onClick={() => handleClick(item.query)}
                 className="w-full rounded-lg border p-3 text-left transition-colors hover:bg-accent"
               >
                 <p className="line-clamp-1 text-sm font-medium">{item.query}</p>

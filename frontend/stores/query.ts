@@ -7,12 +7,20 @@ export interface StageResult {
   error?: string;
 }
 
+export interface ColumnInfo {
+  name: string;
+  type: string;
+  table: string;
+}
+
 export interface QueryResult {
   success: boolean;
   query: string;
   sql: string;
   status: string;
   error?: string;
+  explanation?: string;
+  columns?: ColumnInfo[];
   stages: StageResult[];
   total_duration_ms: number;
   session_id?: string;

@@ -130,6 +130,19 @@ class NL2SQLGenerator:
                 continue
 
         if not candidates:
+            from app.core.config import get_settings
+            settings = get_settings()
+            if settings.environment == "production":
+                elapsed = (time.perf_counter() - start) * 1000
+                return GenerationResult(
+                    id=gen_id, query=query, sql="",
+                    status=GenerationStatus.FAILED,
+                    model_tier="none", model_name="",
+                    intent=intent.model_dump() if isinstance(intent, QueryIntent) else intent,
+                    error="No LLM model available. Configure HF_TOKEN, OPENAI_API_KEY, "
+                          "or switch to development mode for rule-based fallback.",
+                    latency_ms=elapsed, cost=0.0,
+                )
             sql = self._rule_based_generate(query, intent, context, dialect)
             elapsed = (time.perf_counter() - start) * 1000
             return GenerationResult(

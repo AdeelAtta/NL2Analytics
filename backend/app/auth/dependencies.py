@@ -18,7 +18,7 @@ async def get_current_user(
     if api_key:
         settings = get_settings()
         if api_key in settings.api_keys:
-            return {"sub": "api-user", "role": "user", "auth_method": "api_key"}
+            return {"sub": "api-user", "role": "user", "tenant_id": "demo", "auth_method": "api_key"}
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid API key",
@@ -32,6 +32,7 @@ async def get_current_user(
     return {
         "sub": payload.get("sub", "unknown"),
         "role": payload.get("role", "user"),
+        "tenant_id": payload.get("tenant_id", "demo"),
         "auth_method": "jwt",
     }
 

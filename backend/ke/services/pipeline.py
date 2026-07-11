@@ -127,16 +127,18 @@ class PipelineOrchestrator:
             if real and real.get("tables"):
                 merged_context.setdefault("tables", real["tables"])
                 merged_context.setdefault("columns", real["columns"])
-                merged_context.setdefault("relationships", [])
+                merged_context.setdefault("relationships", real.get("relationships", []))
                 merged_context.setdefault("ddl_context",
-                    build_ddl(real["tables"], real["columns"]))
+                    build_ddl(real["tables"], real["columns"], real.get("relationships", [])))
             else:
-                from ke.services.demo_data import get_demo_context
-                demo = get_demo_context()
-                merged_context.setdefault("tables", demo["tables"])
-                merged_context.setdefault("columns", demo["columns"])
-                merged_context.setdefault("relationships", demo["relationships"])
-                merged_context.setdefault("ddl_context", demo["ddl_context"])
+                from app.core.config import get_settings
+                if get_settings().environment != "production":
+                    from ke.services.demo_data import get_demo_context
+                    demo = get_demo_context()
+                    merged_context.setdefault("tables", demo["tables"])
+                    merged_context.setdefault("columns", demo["columns"])
+                    merged_context.setdefault("relationships", demo["relationships"])
+                    merged_context.setdefault("ddl_context", demo["ddl_context"])
 
         session_turns: list[Any] = []
         resolved_session_id = session_id or ""

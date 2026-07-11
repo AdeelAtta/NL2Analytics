@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,7 @@ import { useUIStore } from "@/stores/ui";
 
 interface SyncTable { name: string; columns: unknown[] }
 interface SyncData { tables: SyncTable[]; added: number; changed: number; removed: number }
+interface SavedConn { synced: boolean; connection: { db_type: string; host: string; port: number; database: string; username: string; table_count: number; synced_at: string } | null; table_count: number }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8100/api/v1";
 const DB_TYPES = [
@@ -31,14 +32,36 @@ export function ConnectDatabase() {
   const [dbName, setDbName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [ssl, setSsl] = useState(false);
 
   const [testing, setTesting] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
   const [syncResult, setSyncResult] = useState<SyncData | null>(null);
+  const [savedConn, setSavedConn] = useState<SavedConn | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    fetch(`${API_URL}/sync/status`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success && d.data) {
+          setSavedConn(d.data);
+          if (d.data.connection) {
+            const c = d.data.connection;
+            setDbType(c.db_type || "postgresql");
+            setHost(c.host || "localhost");
+            setPort(String(c.port || 5432));
+            setDbName(c.database || "");
+            setUsername(c.username || "");
+          }
+        }
+      })
+      .catch(() => {});
+  }, [token]);
 
   const getConfig = () => ({
-    db_type: dbType, host, port: parseInt(port), database: dbName, username, password,
+    db_type: dbType, host, port: parseInt(port), database: dbName, username, password, ssl,
   });
 
   const handleTest = async () => {
@@ -76,7 +99,8 @@ export function ConnectDatabase() {
       });
       const d = await r.json();
       if (d.success) {
-        setSyncResult(d.data as SyncData);
+        setSyncResult(d.data);
+        setSavedConn((prev) => prev ? { ...prev, synced: true, table_count: d.data.tables.length, connection: { ...prev.connection!, table_count: d.data.tables.length } } : prev);
         addToast(`Synced ${d.data.tables.length} tables!`, "success");
       } else {
         addToast(d.error || "Sync failed", "error");
@@ -89,9 +113,31 @@ export function ConnectDatabase() {
 
   return (
     <div className="space-y-6">
+      {savedConn?.synced && savedConn.connection && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Saved Connection</CardTitle>
+            <CardDescription>Last synced: {savedConn.connection.synced_at}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <p className="text-sm font-medium">
+                  {savedConn.connection.db_type} — {savedConn.connection.host}:{savedConn.connection.port}/{savedConn.connection.database}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {savedConn.table_count} tables synced
+                </p>
+              </div>
+              <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">Connected</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
-          <CardTitle>Connect Database</CardTitle>
+          <CardTitle>{savedConn?.synced ? "Update Connection" : "Connect Database"}</CardTitle>
           <CardDescription>Connect to your database to query your real schema</CardDescription>
         </CardHeader>
         <CardContent>
@@ -124,6 +170,10 @@ export function ConnectDatabase() {
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <input id="ssl" type="checkbox" checked={ssl} onChange={(e) => setSsl(e.target.checked)} className="h-4 w-4 rounded border-gray-300" />
+              <Label htmlFor="ssl" className="text-sm font-normal">Use SSL connection</Label>
             </div>
           </div>
 

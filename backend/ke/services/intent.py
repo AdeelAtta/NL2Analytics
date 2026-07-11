@@ -263,6 +263,62 @@ class IntentAgent:
                             break
                         break
 
+        numeric_ops = [
+            ({"over", "more than", "greater than", "above", "exceeds", "exceeding", "higher than"}, ">"),
+            ({"under", "less than", "below", "lower than", "fewer than"}, "<"),
+            ({"at least", "minimum", "no less than"}, ">="),
+            ({"at most", "maximum", "no more than"}, "<="),
+            ({"equals", "equal to", "exactly"}, "="),
+        ]
+        for keywords, operator in numeric_ops:
+            for kw in keywords:
+                idx = ql.find(kw)
+                if idx >= 0:
+                    after = ql[idx + len(kw):].strip().split()[0] if ql[idx + len(kw):].strip() else ""
+                    try:
+                        val = int(after.replace(",", ""))
+                        before = ql[:idx].strip().split()[-1] if ql[:idx].strip() else ""
+
+                        # Find tables matching the word before the operator
+                        table_names_in_ctx = {t.get("name", "").lower() for t in (context.get("tables") or [])}
+                        matched_table = before if before in table_names_in_ctx else ""
+
+                        all_numeric = {n: info for n, info in col_names.items()
+                                       if any(t in info["type"].lower() for t in ("int", "decimal", "numeric", "float", "double", "bigint"))}
+
+                        if matched_table:
+                            preferred = {n: info for n, info in all_numeric.items()
+                                         if info["table"].lower() == matched_table}
+                            if preferred:
+                                candidates = sorted(preferred.keys(),
+                                    key=lambda c: 1 if c.endswith("_id") or c == "id" else 0)
+                                for nc in candidates:
+                                    info = preferred[nc]
+                                    filters.append(FilterExpression(
+                                        column=ColumnRef(table=info["table"], column=nc),
+                                        operator=operator, value=str(val),
+                                    ))
+                                    break
+                                break
+
+                        if not filters and all_numeric:
+                            candidates = sorted(all_numeric.keys(),
+                                key=lambda c: (0 if before and before in c else 1,
+                                               1 if c.endswith("_id") else 0,
+                                               c != "id"))
+                            for nc in candidates:
+                                info = all_numeric[nc]
+                                filters.append(FilterExpression(
+                                    column=ColumnRef(table=info["table"], column=nc),
+                                    operator=operator, value=str(val),
+                                ))
+                                break
+                            break
+                    except (ValueError, IndexError):
+                        pass
+            if filters:
+                break
+
         stock_phrases = {"out of stock", "low stock", "in stock"}
         for phrase in stock_phrases:
             if phrase in ql:
@@ -286,14 +342,22 @@ class IntentAgent:
             return edges
         relationships = context.get("relationships", [])
         table_ids = {t.id for t in tables}
+        table_name_set = {t.name.lower() for t in tables}
         for rel in relationships:
             src_id = rel.get("source_table_id", "") if isinstance(rel, dict) else getattr(rel, "source_table_id", "")
             tgt_id = rel.get("target_table_id", "") if isinstance(rel, dict) else getattr(rel, "target_table_id", "")
-            if src_id in table_ids or tgt_id in table_ids:
+            src_name = (rel.get("source_table", "") if isinstance(rel, dict) else getattr(rel, "source_table", "")).lower()
+            tgt_name = (rel.get("target_table", "") if isinstance(rel, dict) else getattr(rel, "target_table", "")).lower()
+
+            if src_id in table_ids or tgt_id in table_ids or src_name in table_name_set or tgt_name in table_name_set:
                 src_col = rel.get("source_column", "") if isinstance(rel, dict) else getattr(rel, "source_column", "")
                 tgt_col = rel.get("target_column", "") if isinstance(rel, dict) else getattr(rel, "target_column", "")
-                src_name = _table_name_by_id(src_id, tables)
-                tgt_name = _table_name_by_id(tgt_id, tables)
+
+                if not src_name or src_name not in table_name_set:
+                    src_name = _table_name_by_id(src_id, tables).lower()
+                if not tgt_name or tgt_name not in table_name_set:
+                    tgt_name = _table_name_by_id(tgt_id, tables).lower()
+
                 confidence = rel.get("confidence", 1.0) if isinstance(rel, dict) else getattr(rel, "confidence", 1.0)
                 edges.append({
                     "source_table": src_name,

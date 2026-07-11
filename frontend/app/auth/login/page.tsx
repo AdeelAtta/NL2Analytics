@@ -11,6 +11,7 @@ import { useAuthStore } from "@/stores/auth";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [defaultTab] = useState("signin");
   const login = useAuthStore((s) => s.login);
   const loginWithEmail = useAuthStore((s) => s.loginWithEmail);
   const register = useAuthStore((s) => s.register);
@@ -78,7 +79,7 @@ export default function LoginPage() {
           <CardDescription>Enterprise Text-to-SQL Platform</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Tabs defaultValue="signin" className="w-full">
+          <Tabs defaultValue={defaultTab} className="w-full">
             <TabsList className="w-full">
               <TabsTrigger value="signin" className="flex-1">Sign In</TabsTrigger>
               <TabsTrigger value="register" className="flex-1">Create Account</TabsTrigger>

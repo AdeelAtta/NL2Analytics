@@ -1,27 +1,80 @@
 from __future__ import annotations
 
+import json
+import os
 from typing import Any
 
-_schemas: dict[str, dict[str, Any]] = {}
+DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data")
+_PATH = os.path.join(DATA_DIR, "schemas.json")
 
 
-def store_schema(tenant_id: str, tables: list[dict[str, Any]], columns: list[dict[str, Any]]) -> None:
-    _schemas[tenant_id] = {"tables": tables, "columns": columns}
+def _load() -> dict[str, Any]:
+    if not os.path.exists(_PATH):
+        return {}
+    try:
+        with open(_PATH) as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def _save(data: dict[str, Any]) -> None:
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(_PATH, "w") as f:
+        json.dump(data, f, indent=2)
+
+
+def store_schema(tenant_id: str, tables: list[dict[str, Any]], columns: list[dict[str, Any]],
+                 relationships: list[dict[str, Any]] | None = None) -> None:
+    data = _load()
+    entry = data.get(tenant_id, {})
+    entry["tables"] = tables
+    entry["columns"] = columns
+    if relationships:
+        entry["relationships"] = relationships
+    data[tenant_id] = entry
+    _save(data)
+
+
+def store_connection(tenant_id: str, conn_info: dict[str, Any]) -> None:
+    data = _load()
+    entry = data.get(tenant_id, {})
+    entry["connection"] = conn_info
+    data[tenant_id] = entry
+    _save(data)
+
+
+def get_connection(tenant_id: str) -> dict[str, Any] | None:
+    data = _load()
+    entry = data.get(tenant_id)
+    if entry and "connection" in entry:
+        return entry["connection"]
+    return None
 
 
 def get_schema(tenant_id: str) -> dict[str, Any] | None:
-    return _schemas.get(tenant_id)
+    data = _load()
+    return data.get(tenant_id)
 
 
 def has_schema(tenant_id: str) -> bool:
-    return tenant_id in _schemas
+    data = _load()
+    return tenant_id in data
 
 
 def clear_schema(tenant_id: str) -> None:
-    _schemas.pop(tenant_id, None)
+    data = _load()
+    data.pop(tenant_id, None)
+    _save(data)
 
 
-def build_ddl(tables: list[dict[str, Any]], columns: list[dict[str, Any]]) -> str:
+def list_tenants() -> list[str]:
+    data = _load()
+    return list(data.keys())
+
+
+def build_ddl(tables: list[dict[str, Any]], columns: list[dict[str, Any]],
+              relationships: list[dict[str, Any]] | None = None) -> str:
     lines: list[str] = []
     for tbl in tables:
         tbl_name = tbl["name"]
@@ -35,4 +88,9 @@ def build_ddl(tables: list[dict[str, Any]], columns: list[dict[str, Any]]) -> st
                 parts.append("NOT NULL")
             lines.append(" ".join(parts))
         lines.append(");")
+        if relationships:
+            for rel in relationships:
+                if rel.get("source_table", "").lower() == tbl_name.lower():
+                    lines.append(f"-- {rel['source_table']}.{rel['source_column']} -> "
+                                 f"{rel['target_table']}.{rel['target_column']}")
     return "\n".join(lines)

@@ -207,9 +207,15 @@ class InferenceFactory:
     @classmethod
     def create(cls, provider: str, model_name: str | None, cost: float = 0.0) -> ModelClient:
         settings = get_settings()
+        is_prod = settings.environment == "production"
+
         if provider == "huggingface" and not settings.hf_token:
+            if is_prod:
+                raise RuntimeError("HF_TOKEN not configured. Set HF_TOKEN environment variable for HuggingFace inference.")
             return MockClient(str(model_name or "mock"), cost)
         if provider == "openai" and not settings.openai_api_key:
+            if is_prod:
+                raise RuntimeError("OPENAI_API_KEY not configured. Set OPENAI_API_KEY environment variable for OpenAI inference.")
             return MockClient(str(model_name or "mock"), cost)
         client_cls = cls._registry.get(provider)
         if client_cls is not None:

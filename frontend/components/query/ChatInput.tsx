@@ -48,8 +48,8 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} role="form" aria-label="Ask a question">
-      <div className="relative flex items-end gap-2 rounded-2xl border border-input bg-background px-4 py-3 shadow-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 transition-all">
+    <form onSubmit={handleSubmit} role="form" aria-label="Ask a question" className="w-full">
+      <div className="relative flex items-end gap-2 rounded-2xl border border-input bg-background px-4 py-3 shadow-sm ring-offset-background transition-all focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
         <Sparkles className="mb-1 h-4 w-4 shrink-0 text-muted-foreground" />
         <textarea
           ref={textareaRef}

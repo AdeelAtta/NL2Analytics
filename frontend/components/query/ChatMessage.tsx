@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, Fragment } from "react";
+import { useState, Fragment, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   ChevronDown, ChevronRight, Copy, Check,
   ThumbsUp, ThumbsDown, Sparkles, User,
-  AlertCircle,
+  AlertCircle, Clock,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth";
 import { useUIStore } from "@/stores/ui";
@@ -24,6 +24,32 @@ interface ChatMessageProps {
     loading?: boolean;
     error?: string | null;
   };
+}
+
+function formatTime(msgId: string) {
+  const ts = parseInt(msgId.split("_")[1], 10);
+  if (isNaN(ts)) return "";
+  const d = new Date(ts);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function highlightSQL(sql: string) {
+  const keywords = /\b(SELECT|FROM|WHERE|AND|OR|NOT|IN|LIKE|BETWEEN|IS|NULL|AS|ON|JOIN|LEFT|RIGHT|INNER|OUTER|CROSS|FULL|NATURAL|GROUP|BY|ORDER|HAVING|LIMIT|OFFSET|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|ALTER|DROP|INDEX|VIEW|COUNT|SUM|AVG|MIN|MAX|DISTINCT|CASE|WHEN|THEN|ELSE|END|EXISTS|UNION|ALL|ANY|SOME|ASC|DESC|WITH|RECURSIVE|CAST|COALESCE|NULLIF|TRUE|FALSE|PRIMARY|KEY|FOREIGN|REFERENCES|CASCADE|RESTRICT|RETURNING|OVER|PARTITION|ROW|ROWS|RANGE|FETCH|NEXT|ROWS|ONLY|USING|EXCEPT|INTERSECT|LATERAL|QUALIFY|MATCH_RECOGNIZE)\b/gi;
+  const parts = sql.split(/(\b(?:SELECT|FROM|WHERE|AND|OR|NOT|IN|LIKE|BETWEEN|IS|NULL|AS|ON|JOIN|LEFT|RIGHT|INNER|OUTER|CROSS|FULL|NATURAL|GROUP|BY|ORDER|HAVING|LIMIT|OFFSET|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|ALTER|DROP|INDEX|VIEW|COUNT|SUM|AVG|MIN|MAX|DISTINCT|CASE|WHEN|THEN|ELSE|END|EXISTS|UNION|ALL|ANY|SOME|ASC|DESC|WITH|RECURSIVE|CAST|COALESCE|NULLIF|TRUE|FALSE|PRIMARY|KEY|FOREIGN|REFERENCES|CASCADE|RESTRICT|RETURNING|OVER|PARTITION|ROW|ROWS|RANGE|FETCH|NEXT|ROWS|ONLY|USING|EXCEPT|INTERSECT|LATERAL|QUALIFY|MATCH_RECOGNIZE)\b)/gi);
+  return parts.map((part, i) => {
+    if (keywords.test(part)) {
+      keywords.lastIndex = 0;
+      return <span key={i} className="text-[#89b4fa] font-semibold">{part}</span>;
+    }
+    keywords.lastIndex = 0;
+    if (/^'.*'$/.test(part) || /^".*"$/.test(part)) {
+      return <span key={i} className="text-[#a6e3a1]">{part}</span>;
+    }
+    if (/^\d+(\.\d+)?$/.test(part.trim())) {
+      return <span key={i} className="text-[#fab387]">{part}</span>;
+    }
+    return <Fragment key={i}>{part}</Fragment>;
+  });
 }
 
 function renderBold(text: string) {
@@ -46,11 +72,16 @@ function TypingDots() {
   );
 }
 
-function UserBubble({ content }: { content: string }) {
+function UserBubble({ content, msgId }: { content: string; msgId: string }) {
+  const time = useMemo(() => formatTime(msgId), [msgId]);
   return (
     <div className="flex items-end justify-end gap-2 animate-in fade-in slide-in-from-right-4 duration-300">
       <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-primary/90 px-4 py-2.5 text-sm text-primary-foreground shadow-sm backdrop-blur-sm">
         {content}
+        <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-primary-foreground/60">
+          <Clock className="h-3 w-3" />
+          {time}
+        </div>
       </div>
       <Avatar className="h-7 w-7 border-2 border-background shrink-0">
         <AvatarFallback className="bg-primary text-[10px] text-primary-foreground">
@@ -93,7 +124,7 @@ function ErrorBubble({ error }: { error: string }) {
   );
 }
 
-function ResultBubble({ result }: { result: QueryResult }) {
+function ResultBubble({ result, msgId }: { result: QueryResult; msgId: string }) {
   const token = useAuthStore((s) => s.token);
   const addToast = useUIStore((s) => s.addToast);
   const [showSql, setShowSql] = useState(true);
@@ -120,6 +151,7 @@ function ResultBubble({ result }: { result: QueryResult }) {
     } catch { /* ignore */ }
   };
 
+  const time = useMemo(() => formatTime(msgId), [msgId]);
   const hasContent = result.explanation || result.sql || (result.columns && result.columns.length > 0);
 
   return (
@@ -132,7 +164,7 @@ function ResultBubble({ result }: { result: QueryResult }) {
       <div className="min-w-0 flex-1 space-y-2.5">
         {!hasContent && result.sql && (
           <div className="rounded-2xl rounded-bl-sm border bg-card px-4 py-3 text-sm shadow-sm">
-            <pre className="overflow-x-auto font-mono text-sm leading-relaxed">{result.sql}</pre>
+            <pre className="overflow-x-auto font-mono text-sm leading-relaxed">{highlightSQL(result.sql)}</pre>
           </div>
         )}
 
@@ -164,7 +196,7 @@ function ResultBubble({ result }: { result: QueryResult }) {
               <div className="border-t">
                 <div className="group relative">
                   <pre className="overflow-x-auto bg-[#1e1e2e] p-4 text-sm font-mono leading-relaxed text-[#cdd6f4]">
-                    <code>{result.sql}</code>
+                    <code>{highlightSQL(result.sql)}</code>
                   </pre>
                   <Button
                     variant="secondary"
@@ -187,6 +219,12 @@ function ResultBubble({ result }: { result: QueryResult }) {
 
 
         <div className="flex items-center gap-0.5 px-1">
+          {time && (
+            <span className="mr-auto flex items-center gap-1 text-[10px] text-muted-foreground/40">
+              <Clock className="h-3 w-3" />
+              {time}
+            </span>
+          )}
           <button
             onClick={() => handleFeedback(1)}
             disabled={!!feedback}
@@ -234,10 +272,10 @@ function ResultBubble({ result }: { result: QueryResult }) {
 }
 
 export function ChatMessage({ message }: ChatMessageProps) {
-  const { role, content, result, loading, error } = message;
+  const { id, role, content, result, loading, error } = message;
 
   if (role === "user") {
-    return <UserBubble content={content} />;
+    return <UserBubble content={content} msgId={id} />;
   }
 
   if (loading) {
@@ -249,7 +287,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
   }
 
   if (result) {
-    return <ResultBubble result={result} />;
+    return <ResultBubble result={result} msgId={id} />;
   }
 
   if (content) {

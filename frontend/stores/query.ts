@@ -35,56 +35,89 @@ interface HistoryItem {
   created_at: string;
 }
 
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  result?: QueryResult | null;
+  loading?: boolean;
+  error?: string | null;
+}
+
 interface QueryState {
-  currentQuery: string;
-  currentResult: QueryResult | null;
-  history: { query: string; sql: string; timestamp: number }[];
+  messages: ChatMessage[];
   pastQueries: HistoryItem[];
   loading: boolean;
-  error: string | null;
-  setQuery: (q: string) => void;
-  execute: (token: string) => Promise<void>;
-  clearResult: () => void;
+  addMessage: (msg: ChatMessage) => void;
+  updateLastAssistant: (update: Partial<ChatMessage>) => void;
+  execute: (query: string, token: string) => Promise<void>;
   loadHistory: (token: string) => Promise<void>;
+  clearConversation: () => void;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8100/api/v1";
 
+let msgId = 0;
+const nextId = () => `msg_${Date.now()}_${++msgId}`;
+
 export const useQueryStore = create<QueryState>()((set, get) => ({
-  currentQuery: "",
-  currentResult: null,
-  history: [],
+  messages: [],
   pastQueries: [],
   loading: false,
-  error: null,
-  setQuery: (q) => set({ currentQuery: q }),
-  execute: async (token: string) => {
-    const { currentQuery, history } = get();
-    if (!currentQuery.trim()) return;
-    set({ loading: true, error: null, currentResult: null });
+
+  addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
+
+  updateLastAssistant: (update) =>
+    set((s) => {
+      const msgs = [...s.messages];
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        if (msgs[i].role === "assistant") {
+          msgs[i] = { ...msgs[i], ...update };
+          break;
+        }
+      }
+      return { messages: msgs };
+    }),
+
+  execute: async (query: string, token: string) => {
+    if (!query.trim()) return;
+
+    const userMsg: ChatMessage = { id: nextId(), role: "user", content: query };
+    const assistantMsg: ChatMessage = {
+      id: nextId(),
+      role: "assistant",
+      content: "",
+      loading: true,
+      error: null,
+      result: null,
+    };
+
+    set((s) => ({ messages: [...s.messages, userMsg, assistantMsg], loading: true }));
+
     try {
       const res = await fetch(`${API_URL}/query`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ query: currentQuery, dry_run: true }),
+        body: JSON.stringify({ query, dry_run: true }),
       });
       if (!res.ok) {
         const text = await res.text();
         throw new Error(`API Error [${res.status}]: ${text}`);
       }
       const data: QueryResult = await res.json();
-      const sql = data.sql || "";
-      set({
-        currentResult: data,
-        loading: false,
-        history: [{ query: currentQuery, sql, timestamp: Date.now() }, ...history].slice(0, 50),
-      });
+      get().updateLastAssistant({ result: data, loading: false, error: null });
+      set({ loading: false });
       get().loadHistory(token);
     } catch (e) {
-      set({ error: (e as Error).message, loading: false });
+      get().updateLastAssistant({
+        loading: false,
+        error: (e as Error).message,
+        result: null,
+      });
+      set({ loading: false });
     }
   },
-  clearResult: () => set({ currentResult: null, error: null }),
+
   loadHistory: async (token: string) => {
     try {
       const res = await fetch(`${API_URL}/history?page_size=20`, {
@@ -96,4 +129,6 @@ export const useQueryStore = create<QueryState>()((set, get) => ({
       }
     } catch { /* ignore */ }
   },
+
+  clearConversation: () => set({ messages: [], loading: false }),
 }));

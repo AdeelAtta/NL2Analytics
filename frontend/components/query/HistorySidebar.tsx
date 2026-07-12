@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useAuthStore } from "@/stores/auth";
 import { useQueryStore } from "@/stores/query";
 import { useUIStore } from "@/stores/ui";
 import { apiGet } from "@/lib/api";
@@ -13,8 +14,9 @@ interface HistoryItem {
 }
 
 export function HistorySidebar() {
-  const setQuery = useQueryStore((s) => s.setQuery);
+  const execute = useQueryStore((s) => s.execute);
   const addToast = useUIStore((s) => s.addToast);
+  const token = useAuthStore((s) => s.token);
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -34,8 +36,10 @@ export function HistorySidebar() {
   }, [items, search]);
 
   const handleClick = (q: string) => {
-    setQuery(q);
-    addToast(`Loaded: "${q}"`, "info");
+    if (token) {
+      execute(q, token);
+      addToast(`Executing: "${q}"`, "info");
+    }
   };
 
   return (

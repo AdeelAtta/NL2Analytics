@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Send, Sparkles } from "lucide-react";
 
 interface ChatInputProps {
   onSend: (query: string) => void;
@@ -11,11 +11,19 @@ interface ChatInputProps {
 
 export function ChatInput({ onSend, disabled }: ChatInputProps) {
   const [value, setValue] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (!disabled) inputRef.current?.focus();
+    if (!disabled) textareaRef.current?.focus();
   }, [disabled]);
+
+  const adjustHeight = () => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+    }
+  };
 
   const handleSubmit = (e?: FormEvent) => {
     e?.preventDefault();
@@ -23,10 +31,13 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     if (!trimmed || disabled) return;
     onSend(trimmed);
     setValue("");
-    inputRef.current?.focus();
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
+    textareaRef.current?.focus();
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
@@ -37,24 +48,33 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2" role="form" aria-label="Ask a question">
-      <Input
-        ref={inputRef}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="Ask a question about your data..."
-        disabled={disabled}
-        className="flex-1"
-        aria-label="Your question"
-      />
-      <Button
-        type="submit"
-        disabled={disabled || !value.trim()}
-        aria-label="Submit question"
-      >
-        Ask
-      </Button>
+    <form onSubmit={handleSubmit} role="form" aria-label="Ask a question">
+      <div className="relative flex items-end gap-2 rounded-2xl border border-input bg-background px-4 py-3 shadow-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 transition-all">
+        <Sparkles className="mb-1 h-4 w-4 shrink-0 text-muted-foreground" />
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value);
+            adjustHeight();
+          }}
+          onKeyDown={handleKeyDown}
+          placeholder="Ask a question about your data..."
+          disabled={disabled}
+          rows={1}
+          className="min-h-[24px] w-full resize-none bg-transparent text-sm outline-none placeholder:text-muted-foreground/60 disabled:cursor-not-allowed"
+          aria-label="Your question"
+        />
+        <Button
+          type="submit"
+          size="icon"
+          disabled={disabled || !value.trim()}
+          className="mb-0.5 h-8 w-8 shrink-0 rounded-full"
+          aria-label="Submit question"
+        >
+          <Send className="h-4 w-4" />
+        </Button>
+      </div>
     </form>
   );
 }

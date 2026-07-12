@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/stores/auth";
 import { useQueryStore } from "@/stores/query";
 import { useUIStore } from "@/stores/ui";
 import { ChatInput } from "@/components/query/ChatInput";
 import { ChatMessage } from "@/components/query/ChatMessage";
+import { Sparkles, Database, MessageSquare, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 const EXAMPLE_QUERIES = [
@@ -21,8 +22,9 @@ export default function QueryPage() {
   const token = useAuthStore((s) => s.token);
   const isAuth = useAuthStore((s) => s.isAuthenticated);
   const addToast = useUIStore((s) => s.addToast);
-  const { currentResult, loading, error, history, pastQueries, execute, loadHistory, setQuery } = useQueryStore();
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const { messages, loading, execute, loadHistory, clearConversation } = useQueryStore();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const hasRun = useRef(false);
 
   useEffect(() => {
@@ -33,121 +35,114 @@ export default function QueryPage() {
     const qParam = searchParams.get("q");
     if (qParam && !hasRun.current && token && isAuth) {
       hasRun.current = true;
-      setQuery(qParam);
-      execute(token).catch(() => addToast("Query failed", "error"));
+      execute(qParam, token).catch(() => addToast("Query failed", "error"));
     }
-  }, [searchParams, token, isAuth, execute, setQuery, addToast]);
+  }, [searchParams, token, isAuth, execute, addToast]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [history.length, currentResult, loading, pastQueries.length]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-  const handleSend = (q: string) => {
-    if (!token) { addToast("Please log in first", "warning"); return; }
-    hasRun.current = true;
-    setQuery(q);
-    execute(token).catch(() => addToast("Query failed", "error"));
+  const handleSend = useCallback(
+    (q: string) => {
+      if (!token) {
+        addToast("Please log in first", "warning");
+        return;
+      }
+      hasRun.current = true;
+      execute(q, token).catch(() => addToast("Query failed", "error"));
+    },
+    [token, execute, addToast],
+  );
+
+  const handleClear = () => {
+    clearConversation();
+    addToast("Conversation cleared", "info");
   };
 
-  const showEmpty = pastQueries.length === 0 && history.length === 0 && !loading && !error;
+  const isEmpty = messages.length === 0;
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Ask a Question</h1>
-        <p className="text-sm text-muted-foreground">
-          Ask a natural language question about your data
-        </p>
-      </div>
-
-      <div className="flex flex-col gap-6">
-        {showEmpty && (
-          <div className="flex flex-col items-center gap-6 py-8">
+    <div className="mx-auto flex h-[calc(100vh-4rem)] max-w-3xl flex-col">
+      {/* Messages area */}
+      <div
+        ref={containerRef}
+        className="flex-1 overflow-y-auto scroll-smooth"
+      >
+        {isEmpty ? (
+          <div className="flex h-full flex-col items-center justify-center gap-8 px-6">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg ring-1 ring-white/10">
+              <Sparkles className="h-8 w-8 text-white" />
+            </div>
             <div className="text-center">
-              <div className="text-5xl mb-3">&#x1F50D;</div>
-              <p className="text-lg font-medium">Ask anything about your data</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Try one of these examples to get started
+              <h1 className="text-2xl font-bold tracking-tight">Ask anything about your data</h1>
+              <p className="mt-2 text-sm text-muted-foreground max-w-sm">
+                Describe the data you&apos;re looking for in plain English
               </p>
             </div>
-            <div className="grid w-full gap-2 sm:grid-cols-2">
+            <div className="grid w-full max-w-lg gap-2.5 sm:grid-cols-2">
               {EXAMPLE_QUERIES.map((eq) => (
                 <button
                   key={eq}
                   onClick={() => handleSend(eq)}
-                  className="rounded-lg border p-3 text-left text-sm transition-colors hover:bg-accent hover:border-primary"
+                  className="group flex items-center gap-2.5 rounded-xl border bg-card/50 p-3.5 text-left text-sm transition-all duration-200 hover:border-primary/50 hover:bg-accent hover:shadow-sm"
                 >
-                  <span className="text-muted-foreground">&ldquo;</span>
-                  {eq}
-                  <span className="text-muted-foreground">&rdquo;</span>
-                  <span className="ml-2 text-xs text-primary">&rarr;</span>
+                  <MessageSquare className="h-4 w-4 shrink-0 text-muted-foreground/60 group-hover:text-primary transition-colors" />
+                  <span className="line-clamp-1 font-medium">{eq}</span>
                 </button>
               ))}
             </div>
-            <div className="text-center border-t pt-6 w-full">
-              <p className="text-sm text-muted-foreground mb-2">First time here?</p>
-              <div className="flex justify-center gap-3 text-sm">
-                <Link href="/settings" className="text-primary hover:underline">Connect a database</Link>
-                <span className="text-muted-foreground">&middot;</span>
-                <Link href="/schema" className="text-primary hover:underline">Browse schema</Link>
-              </div>
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <Link
+                href="/settings"
+                className="inline-flex items-center gap-1.5 text-primary hover:underline underline-offset-4"
+              >
+                <Database className="h-4 w-4" />
+                Connect a database
+              </Link>
+              <span className="text-muted-foreground/30">&middot;</span>
+              <Link
+                href="/schema"
+                className="text-primary hover:underline underline-offset-4"
+              >
+                Browse schema
+              </Link>
             </div>
           </div>
-        )}
-
-        {pastQueries.length > 0 && (
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Recent Queries
-            </p>
-            {pastQueries.slice(0, 5).map((pq) => (
-              <button
-                key={pq.id}
-                onClick={() => handleSend(pq.query)}
-                className="w-full rounded-lg border p-3 text-left text-sm transition-colors hover:bg-accent"
-              >
-                <span className="font-medium">{pq.query}</span>
-                <span className="ml-2 text-xs text-muted-foreground">
-                  {pq.duration_ms.toFixed(0)}ms
-                </span>
-                {pq.sql && (
-                  <p className="mt-0.5 line-clamp-1 font-mono text-xs text-muted-foreground">
-                    {pq.sql}
-                  </p>
+        ) : (
+          <div className="space-y-2 px-4 pb-4 pt-6">
+            {messages.map((msg, i) => (
+              <div key={msg.id}>
+                {i > 0 && messages[i - 1].role === "assistant" && msg.role === "user" && (
+                  <div className="pb-4" />
                 )}
-              </button>
+                <ChatMessage message={msg} />
+              </div>
             ))}
+            <div ref={messagesEndRef} />
           </div>
         )}
-
-        {history.map((h, i) => (
-          <ChatMessage
-            key={`h-${i}`}
-            query={h.query}
-            result={{ success: true, query: h.query, sql: h.sql, status: "success", stages: [], total_duration_ms: 0 }}
-          />
-        ))}
-
-        {currentResult && !loading && (
-          <ChatMessage query={history[0]?.query ?? ""} result={currentResult} queryId={String(Date.now())} />
-        )}
-
-        {loading && <ChatMessage query={history[0]?.query ?? ""} loading={true} />}
-
-        {error && !loading && !currentResult && (
-          <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
-            {error}
-          </div>
-        )}
-
-        <div ref={bottomRef} />
       </div>
 
-      <div className="sticky bottom-0 bg-background pb-4 pt-2">
-        <ChatInput onSend={handleSend} disabled={loading || !token} />
-        <p className="mt-1 text-xs text-muted-foreground text-center">
-          Press Enter to submit &middot; Share: <code className="text-xs">/query?q=show%20users</code>
-        </p>
+      {/* Input area */}
+      <div className="border-t bg-background/95 backdrop-blur-sm px-4 py-3">
+        <div className="mx-auto max-w-3xl">
+          <div className="flex items-center gap-2">
+            <ChatInput onSend={handleSend} disabled={loading || !token} />
+            {messages.length > 0 && !loading && (
+              <button
+                onClick={handleClear}
+                className="shrink-0 rounded-lg p-2 text-muted-foreground/50 hover:text-foreground hover:bg-muted/80 transition-all"
+                title="Clear conversation"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <p className="mt-2 text-center text-[10px] text-muted-foreground/40">
+            Enter to send &middot; Shift+Enter for new line &middot; Share questions via <code className="text-xs">/query?q=your%20question</code>
+          </p>
+        </div>
       </div>
     </div>
   );

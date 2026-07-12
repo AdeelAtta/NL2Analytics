@@ -152,7 +152,9 @@ class MockClient(ModelClient):
 
 def _extract_sql(text: str) -> str:
     import re as _re
-    lines = text.split("\n")
+    cleaned = _re.sub(r"```(?:\w+)?\s*\n(.*?)```", r"\1", text, flags=_re.DOTALL)
+    cleaned = cleaned.replace("```", "").strip()
+    lines = cleaned.split("\n")
     sql_lines: list[str] = []
     in_sql = False
     for line in lines:
@@ -170,7 +172,7 @@ def _extract_sql(text: str) -> str:
             break
     if sql_lines:
         return " ".join(sql_lines).strip()
-    return text.strip()
+    return cleaned.strip()
 
 
 _sqlcoder_model_id: str | None = None

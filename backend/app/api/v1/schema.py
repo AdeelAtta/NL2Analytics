@@ -92,12 +92,14 @@ async def get_table(
     if schema and schema.get("tables"):
         for t in schema["tables"]:
             if t["name"] == table_id or f"reg-{t['name']}" == table_id:
+                rows = t.get("sample_rows", [])
                 return {
                     "success": True,
                     "data": {
                         "id": table_id,
                         "name": t["name"],
                         "description": t.get("description", ""),
+                        "sample_rows": rows,
                         "columns": [
                             {
                                 "id": f"col-{c['name']}",

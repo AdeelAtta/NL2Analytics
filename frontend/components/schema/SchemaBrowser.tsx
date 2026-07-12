@@ -15,6 +15,7 @@ interface Column {
 interface TableInfo {
   id: string; name: string; description?: string; schema_name?: string;
   columns?: Column[];
+  sample_rows?: Record<string, unknown>[];
 }
 
 export function SchemaBrowser() {
@@ -148,6 +149,34 @@ export function SchemaBrowser() {
               ) : (
                 <div className="flex h-24 items-center justify-center rounded-lg border-2 border-dashed text-sm text-muted-foreground">
                   No column data available
+                </div>
+              )}
+
+              {(selected as TableInfo).sample_rows && (selected as TableInfo).sample_rows!.length > 0 && (
+                <div className="mt-4">
+                  <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">Sample Rows</p>
+                  <div className="overflow-x-auto rounded-lg border">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b bg-muted/50 text-left">
+                          {Object.keys((selected as TableInfo).sample_rows![0]).map((k) => (
+                            <th key={k} className="px-2 py-1.5 font-medium text-muted-foreground">{k}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(selected as TableInfo).sample_rows!.map((row, i) => (
+                          <tr key={i} className="border-b last:border-0 hover:bg-muted/30">
+                            {Object.values(row).map((v, j) => (
+                              <td key={j} className="px-2 py-1 font-mono text-muted-foreground">
+                                {v === null ? <span className="italic">NULL</span> : String(v).slice(0, 30)}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </CardContent>

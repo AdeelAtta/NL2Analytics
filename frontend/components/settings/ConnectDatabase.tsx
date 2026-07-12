@@ -26,6 +26,7 @@ export function ConnectDatabase() {
   const token = useAuthStore((s) => s.token);
   const addToast = useUIStore((s) => s.addToast);
 
+  const [connName, setConnName] = useState("");
   const [dbType, setDbType] = useState("postgresql");
   const [host, setHost] = useState("localhost");
   const [port, setPort] = useState("5432");
@@ -61,7 +62,7 @@ export function ConnectDatabase() {
   }, [token]);
 
   const getConfig = () => ({
-    db_type: dbType, host, port: parseInt(port), database: dbName, username, password, ssl,
+    name: connName, db_type: dbType, host, port: parseInt(port), database: dbName, username, password, ssl,
   });
 
   const handleTest = async () => {
@@ -142,6 +143,10 @@ export function ConnectDatabase() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="conn-name">Connection Name</Label>
+              <Input id="conn-name" value={connName} onChange={(e) => setConnName(e.target.value)} placeholder="My Production DB" />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="db-type">Database Type</Label>
               <Select value={dbType} onValueChange={setDbType}>

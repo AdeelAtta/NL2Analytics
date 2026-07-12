@@ -120,6 +120,8 @@ class NL2SQLGenerator:
                         context.get("relationships", []) if context else [],
                     )
                     prompt = self._build_prompt(query, intent, context, schema_ddl, dialect, tier_name)
+                    import logging
+                    logging.getLogger("ke.prompt").info("LLM Prompt:\n%s\n---END PROMPT---", prompt)
                     sql = await client.generate(prompt)
                     candidate_elapsed = (time.perf_counter() - candidate_start) * 1000
                     score = self._score_candidate(sql, query, intent)

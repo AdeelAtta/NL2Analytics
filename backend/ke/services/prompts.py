@@ -89,7 +89,23 @@ def format_schema_ddl(tables: list[dict[str, Any]], columns: list[dict[str, Any]
             desc = f" -- {col_desc}" if col_desc else ""
             lines.append(f"  {col_name} {col_type}{pk}{nullable}{fk}{desc}")
         lines.append(f")")
-        lines.append("")
+
+        # Sample rows
+        sample = tbl.get("sample_rows", [])
+        if sample:
+            col_names = list(sample[0].keys())
+            lines.append(f"SAMPLE ROWS ({len(sample)} rows):")
+            for row in sample:
+                vals = []
+                for cn in col_names:
+                    v = row.get(cn, "")
+                    if v is None:
+                        vals.append("NULL")
+                    else:
+                        vals.append(str(v)[:30])
+                lines.append(f"  {', '.join(vals)}")
+            lines.append("")
+
     return "\n".join(lines)
 
 

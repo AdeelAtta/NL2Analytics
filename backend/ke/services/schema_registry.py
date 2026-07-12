@@ -36,6 +36,17 @@ def store_schema(tenant_id: str, tables: list[dict[str, Any]], columns: list[dic
     _save(data)
 
 
+def get_sample_rows(tenant_id: str, table_name: str) -> list[dict[str, Any]]:
+    data = _load()
+    entry = data.get(tenant_id)
+    if not entry:
+        return []
+    for t in entry.get("tables", []):
+        if t.get("name", "").lower() == table_name.lower():
+            return t.get("sample_rows", [])
+    return []
+
+
 def store_connection(tenant_id: str, conn_info: dict[str, Any]) -> None:
     data = _load()
     entry = data.get(tenant_id, {})

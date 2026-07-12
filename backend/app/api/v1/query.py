@@ -40,7 +40,20 @@ async def execute_query(
             detail="Query is required",
         )
 
-    tenant_id = getattr(request.state, "tenant_id", current_user.get("sub", "default"))
+    tenant_id = getattr(request.state, "tenant_id", current_user.get("tenant_id", "demo"))
+
+    if body.get("dry_run") == "preview":
+        from ke.services.schema_registry import get_schema
+        from ke.services.intent import IntentAgent
+        from ke.services.prompts import format_schema_ddl
+        schema_data = get_schema(tenant_id)
+        if not schema_data:
+            return {"success": False, "error": "No schema synced for this tenant. Sync a database first."}
+        intent = IntentAgent().classify(query, schema_data)
+        ddl = format_schema_ddl(schema_data.get("tables",[]), schema_data.get("columns",[]), schema_data.get("relationships",[]))
+        return {"success": True, "preview": True, "schema": ddl, "tables": [t.name for t in intent.tables]}
+
+    session_id = body.get("session_id")
     session_id = body.get("session_id")
     dry_run = body.get("dry_run", True)
 

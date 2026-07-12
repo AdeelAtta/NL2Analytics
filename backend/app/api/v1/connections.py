@@ -41,18 +41,28 @@ async def create_connection(
 
     tenant_id = getattr(request.state, "tenant_id", current_user.get("tenant_id", "demo"))
 
-    import hashlib
+    import hashlib, uuid
     from datetime import UTC, datetime
 
-    from ke.models.schema import DatabaseConfig as DatabaseConfigModel
+    from ke.models.schema import DatabaseConfig as DatabaseConfigModel, Tenant as TenantModel
+    from ke.stores.schema.repository import TenantRepository
 
     conn_str = f"{body.db_type}://{body.username}:{body.password}@{body.host}:{body.port}/{body.database_name}"
     connection_hash = hashlib.sha256(conn_str.encode()).hexdigest()
 
     async with get_session() as session:
+        tenant_repo = TenantRepository(session)
+        existing_tenant = await tenant_repo.get(tenant_id)
+        if existing_tenant is None:
+            await tenant_repo.create(TenantModel(
+                id=tenant_id, name=f"Tenant {tenant_id[:8]}",
+                slug=tenant_id[:50], tier="starter", status="active",
+                created_at=datetime.now(UTC), updated_at=datetime.now(UTC),
+            ))
+
         repo = DatabaseConfigRepository(session)
         entry = await repo.create(DatabaseConfigModel(
-            id="",
+            id=str(uuid.uuid4()),
             tenant_id=tenant_id,
             name=body.name,
             db_type=body.db_type,

@@ -25,6 +25,7 @@ router = APIRouter(prefix="/api/v1/sync", tags=["sync"])
 
 
 class SyncConnectionRequest(BaseModel):
+    name: str = ""
     db_type: str = "postgresql"
     host: str = "localhost"
     port: int = 5432
@@ -168,6 +169,30 @@ async def sync_and_extract(
                 "columns": cols,
             })
 
+        # Extract 3 sample rows per table for LLM context
+        sample_rows: dict[str, list[dict[str, Any]]] = {}
+        try:
+            sample_cls = ConnectorRegistry.get_connector(body.db_type)
+            sample_conn = sample_cls()
+            await sample_conn.connect(_make_config(body, 10))
+            schema_name = result.schema_info.name if result.schema_info else None
+            for tbl in tables_out:
+                try:
+                    qualified = f'"{schema_name}"."{tbl["name"]}"' if schema_name else f'"{tbl["name"]}"'
+                    raw = await sample_conn._conn.fetch(f"SELECT * FROM {qualified} LIMIT 3")
+                    if raw:
+                        sample_rows[tbl["name"]] = [dict(r) for r in raw]
+                except Exception as e:
+                    import logging
+                    logging.warning("Sample row fetch failed for %s: %s", tbl['name'], e)
+            await sample_conn.close()
+        except Exception as e:
+            import logging
+            logging.warning("Sample row connection failed: %s", e)
+
+        for tbl in tables_out:
+            tbl["sample_rows"] = sample_rows.get(tbl["name"], [])
+
         # Infer relationships from FK-like column names
         inferred_rels = _infer_relationships(tables_out)
         all_relationships = inferred_rels
@@ -179,6 +204,7 @@ async def sync_and_extract(
         # Save connection details for later use
         from ke.services.schema_registry import store_connection
         store_connection(tenant_id, {
+            "name": body.name,
             "db_type": body.db_type,
             "host": body.host,
             "port": body.port,
@@ -209,17 +235,12 @@ async def sync_and_extract(
 
 async def _store_in_postgres(tenant_id: str, tables: list[dict[str, Any]], columns: list[dict[str, Any]]) -> None:
     try:
+        import uuid as _uuid
         from app.core.database import get_session
         from ke.models.schema import (
             Column as ColumnModel,
-        )
-        from ke.models.schema import (
             DatabaseConfig as DatabaseConfigModel,
-        )
-        from ke.models.schema import (
             Table as TableModel,
-        )
-        from ke.models.schema import (
             Tenant as TenantModel,
         )
         from ke.stores.schema.repository import (
@@ -230,47 +251,41 @@ async def _store_in_postgres(tenant_id: str, tables: list[dict[str, Any]], colum
         )
 
         async with get_session() as session:
-            # 1. Upsert tenant
             tenant_repo = TenantRepository(session)
-            existing = await tenant_repo.get(tenant_id)
-            if existing is None:
+            if await tenant_repo.get(tenant_id) is None:
                 await tenant_repo.create(TenantModel(
                     id=tenant_id, name=f"Tenant {tenant_id[:8]}",
                     slug=tenant_id[:50], tier="starter", status="active",
                     created_at=datetime.now(UTC), updated_at=datetime.now(UTC),
                 ))
 
-            # 2. Upsert database config
             db_repo = DatabaseConfigRepository(session)
-            db_id = f"db-{tenant_id}"
-            existing_db = await db_repo.get(db_id)
-            if existing_db is None:
+            db_uuid = str(_uuid.uuid4())
+            if await db_repo.get(db_uuid) is None:
                 await db_repo.create(DatabaseConfigModel(
-                    id=db_id, tenant_id=tenant_id, name="Synced Database",
+                    id=db_uuid, tenant_id=tenant_id, name="Synced Database",
                     db_type="postgresql", connection_hash=tenant_id,
                     host="", sync_status="synced", table_count=len(tables),
                     is_active=True, created_at=datetime.now(UTC), updated_at=datetime.now(UTC),
                 ))
 
-            # 3. Upsert tables + columns
             table_repo = TableRepository(session)
             col_repo = ColumnRepository(session)
-
             for tbl in tables:
-                table_id = f"tbl-{tenant_id}-{tbl['name']}"
-                existing_tbl = await table_repo.get(table_id)
-                if existing_tbl is None:
+                tbl_uuid = str(_uuid.uuid4())
+                if await table_repo.get(tbl_uuid) is None:
+                    schema_uuid = str(_uuid.uuid4())
                     await table_repo.create(TableModel(
-                        id=table_id, schema_id="synced", name=tbl["name"],
+                        id=tbl_uuid, schema_id=schema_uuid, name=tbl["name"],
                         description=f"{len(tbl['columns'])} columns",
                         is_active=True,
+                        created_at=datetime.now(UTC), updated_at=datetime.now(UTC),
                     ))
                 for col in tbl.get("columns", []):
-                    col_id = f"col-{tenant_id}-{tbl['name']}-{col['name']}"
-                    existing_col = await col_repo.get(col_id)
-                    if existing_col is None:
+                    col_uuid = str(_uuid.uuid4())
+                    if await col_repo.get(col_uuid) is None:
                         await col_repo.create(ColumnModel(
-                            id=col_id, table_id=table_id, name=col["name"],
+                            id=col_uuid, table_id=tbl_uuid, name=col["name"],
                             data_type=col.get("data_type", "unknown"),
                             ordinal_position=col.get("ordinal_position", 0),
                             is_nullable=col.get("is_nullable", True),

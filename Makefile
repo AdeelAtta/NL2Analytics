@@ -53,8 +53,17 @@ down: ## Stop all services
 db-migrate: ## Run database migrations
 	cd backend && uv run alembic upgrade head
 
-db-seed: ## Seed database
+db-seed: ## Seed placeholder data (legacy)
 	cd backend && uv run scripts/seed.py
+
+seed: ## Seed a test database (usage: make seed DB=lego [PASSWORD=postgres])
+	POSTGRES_PASSWORD=$(PASSWORD) ./bin/seed.sh $(DB)
+
+seed-all: ## Seed all test databases (usage: make seed-all [PASSWORD=postgres])
+	POSTGRES_PASSWORD=$(PASSWORD) ./bin/seed.sh --all
+
+seed-docker: ## Seed using docker-compose postgres (usage: make seed-docker DB=lego)
+	./bin/seed.sh --docker $(DB)
 
 pre-commit: ## Run pre-commit hooks on all files
 	pre-commit run --all-files

@@ -159,6 +159,11 @@ export function ConnectDatabase() {
             <div className="space-y-2">
               <Label htmlFor="host">Host</Label>
               <Input id="host" value={host} onChange={(e) => setHost(e.target.value)} />
+              {host === "localhost" && (
+                <p className="text-[10px] text-muted-foreground/60">
+                  Running in Docker? Use <code className="text-[10px] font-mono">host.docker.internal</code>
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="port">Port</Label>

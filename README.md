@@ -28,20 +28,42 @@ OpenQuery connects to enterprise databases (PostgreSQL, MySQL, Snowflake, BigQue
 
 ## Quick Start
 
-### Prerequisites
+### Option A: All-in-One Docker (recommended)
+
+Starts everything — database, cache, backend & frontend — with hot-reload.
+
+```bash
+# Start all services
+docker compose -f docker-compose.dev.yml up --build
+
+# Background mode
+docker compose -f docker-compose.dev.yml up --build -d
+
+# Verify
+curl http://localhost:8100/api/v1/health/live
+open http://localhost:3000
+```
+
+Add your HuggingFace token to `.env.dev` for LLM-powered SQL generation:
+
+```env
+HF_TOKEN=hf_xxxxxxxxxx
+```
+
+Stop with `docker compose -f docker-compose.dev.yml down`.
+
+### Option B: Native (manual)
+
+#### Prerequisites
 
 - Python 3.12+
 - Node.js 20+
 - Docker & Docker Compose
 - uv (Python package manager): `pip install uv`
-- pnpm (recommended) or npm
 
-### Setup
+#### Setup
 
 ```bash
-# Clone and enter repo
-git clone <repo-url> && cd openquery
-
 # Install dependencies
 make install
 
@@ -49,7 +71,7 @@ make install
 cp .env.example .env
 
 # Start infrastructure services
-docker compose -f infra/docker/docker-compose.yml up -d postgres redis qdrant
+docker compose -f infra/docker/docker-compose.db.yml up -d
 
 # Run database migrations
 make db-migrate
@@ -58,7 +80,7 @@ make db-migrate
 make dev
 ```
 
-### Verify
+#### Verify
 
 ```bash
 # Backend health
@@ -66,10 +88,17 @@ curl http://localhost:8100/api/v1/health/live
 
 # Frontend
 open http://localhost:3000
-
-# Grafana dashboards
-open http://localhost:3001
 ```
+
+### Docker Dev Services
+
+| Service | Port | Hot-Reload |
+|---|---|---|
+| `postgres` | 5432 | — |
+| `redis` | 6379 | — |
+| `qdrant` | 6333 / 6334 | — |
+| `backend` | 8100 | ✅ uvicorn `--reload` + bind mount |
+| `frontend` | 3000 | ✅ Next.js Turbopack HMR + bind mount |
 
 ## Project Structure
 

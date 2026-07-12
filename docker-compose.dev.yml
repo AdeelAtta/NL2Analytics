@@ -6,13 +6,14 @@ services:
   postgres:
     image: postgres:16-alpine
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-upl}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./infra/docker/postgres-init:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 5s
@@ -59,7 +60,8 @@ services:
     env_file:
       - .env.dev
     environment:
-      POSTGRES_DSN: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-upl}
+      POSTGRES_DSN: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/upl
+      POSTGRES_DSN_SYNC: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/upl
       REDIS_URL: redis://redis:6379/0
       QDRANT_URL: http://qdrant:6333
       JWT_SECRET: dev-jwt-secret-change-in-production
@@ -79,7 +81,7 @@ services:
     depends_on:
       - backend
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8100
+      NEXT_PUBLIC_API_URL: http://localhost:8100/api/v1
     volumes:
       - ./frontend:/app
       - /app/node_modules

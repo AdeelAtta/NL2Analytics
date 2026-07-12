@@ -12,7 +12,6 @@ import { useAuthStore } from "@/stores/auth";
 export default function LoginPage() {
   const router = useRouter();
   const [defaultTab] = useState("signin");
-  const login = useAuthStore((s) => s.login);
   const loginWithEmail = useAuthStore((s) => s.loginWithEmail);
   const register = useAuthStore((s) => s.register);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -54,26 +53,15 @@ export default function LoginPage() {
     setLoading(false);
   };
 
-  const handleDemoLogin = async () => {
-    setLoading(true); setError("");
-    try {
-      await login();
-      router.replace("/dashboard");
-    } catch {
-      setError("Demo login failed. Is the backend running?");
-    }
-    setLoading(false);
-  };
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-xl font-bold text-primary-foreground">
-            OQ
+          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center">
+            <img src="/schemaintern_logo.png" alt="SchemaIntern" className="h-12 w-12" />
           </div>
-          <CardTitle className="text-2xl">Welcome to OpenQuery</CardTitle>
-          <CardDescription>Enterprise Text-to-SQL Platform</CardDescription>
+          <CardTitle className="text-2xl">Welcome to Schema<span className="text-primary">Intern</span></CardTitle>
+          <CardDescription>DB-Aware NL to SQL Platform</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Tabs defaultValue={defaultTab} className="w-full">
@@ -105,15 +93,7 @@ export default function LoginPage() {
               <Button className="w-full" size="lg" onClick={handleSignIn} disabled={loading}>
                 {loading ? "Signing in..." : "Sign In"}
               </Button>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
-                </div>
-              </div>
-              <Button variant="outline" className="w-full" onClick={handleDemoLogin} disabled={loading}>
-                Demo Login (no account needed)
-              </Button>
+
             </TabsContent>
 
             <TabsContent value="register" className="space-y-4 pt-4">

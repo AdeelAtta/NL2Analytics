@@ -79,7 +79,7 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: "openquery-auth",
+      name: "schemaintern-auth",
       partialize: (state) => ({
         token: state.token, tenantId: state.tenantId, userId: state.userId,
         email: state.email, name: state.name, role: state.role, isAuthenticated: state.isAuthenticated,

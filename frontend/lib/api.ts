@@ -2,7 +2,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8100/api/v
 
 function getToken(): string | null {
   try {
-    const raw = localStorage.getItem("openquery-auth");
+    const raw = localStorage.getItem("schemaintern-auth");
     if (!raw) return null;
     return JSON.parse(raw)?.state?.token ?? null;
   } catch {

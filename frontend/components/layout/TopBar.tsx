@@ -75,7 +75,7 @@ export function TopBar() {
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => {
             logout();
-            try { localStorage.removeItem("openquery-query"); } catch {}
+            try { localStorage.removeItem("schemaintern-query"); } catch {}
             router.push("/auth/login");
           }}>
             <LogOut className="mr-2 h-4 w-4" />

@@ -74,7 +74,7 @@ services:
     env_file:
       - ../../.env
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8100
+      NEXT_PUBLIC_API_URL: http://localhost:8100/api/v1
 
   prometheus:
     image: prom/prometheus:latest

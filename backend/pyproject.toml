@@ -1,5 +1,5 @@
 [project]
-name = "upl-backend"
+name = "schemaintern-backend"
 version = "0.1.0"
 description = "Enterprise Data Intelligence Platform - Backend"
 requires-python = ">=3.12"

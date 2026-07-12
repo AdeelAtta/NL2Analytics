@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     )
 
     # App
-    app_name: str = "UPL Backend"
+    app_name: str = "SchemaIntern Backend"
     app_version: str = "0.1.0"
     debug: bool = False
     environment: str = "development"

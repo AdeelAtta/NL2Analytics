@@ -29,7 +29,7 @@ def upgrade() -> None:
         sa.Column("action", sa.String(64), nullable=False),
         sa.Column("resource_type", sa.String(64), nullable=False, server_default=""),
         sa.Column("resource_id", sa.String(128), nullable=False, server_default=""),
-        sa.Column("details", JSONB(), nullable=False, server_default="'{}'::jsonb"),
+        sa.Column("details", JSONB(), nullable=False, server_default=sa.text("'{}'::jsonb")),
         sa.Column("ip_address", sa.String(45), nullable=False, server_default=""),
         sa.Column("user_agent", sa.Text(), nullable=False, server_default=""),
         sa.Column("outcome", sa.String(16), nullable=False, server_default="success"),

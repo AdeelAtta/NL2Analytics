@@ -6,8 +6,8 @@ import { Providers } from "@/components/layout/Providers";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "OpenQuery — Enterprise Data Intelligence",
-  description: "Enterprise Data Intelligence Platform",
+  title: "SchemaIntern — DB-Aware NL to SQL",
+  description: "Schema-Aware Natural Language to SQL Platform",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

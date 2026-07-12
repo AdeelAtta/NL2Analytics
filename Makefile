@@ -39,10 +39,10 @@ clean: ## Clean build artifacts
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 
 build-backend: ## Build backend Docker image
-	docker build -f infra/docker/Dockerfile.backend -t openquery-backend:latest .
+	docker build -f infra/docker/Dockerfile.backend -t schemaintern-backend:latest .
 
 build-frontend: ## Build frontend Docker image
-	docker build -f infra/docker/Dockerfile.frontend -t openquery-frontend:latest .
+	docker build -f infra/docker/Dockerfile.frontend -t schemaintern-frontend:latest .
 
 up: ## Start all services with Docker Compose
 	docker compose -f infra/docker/docker-compose.yml up -d
@@ -53,8 +53,17 @@ down: ## Stop all services
 db-migrate: ## Run database migrations
 	cd backend && uv run alembic upgrade head
 
-db-seed: ## Seed database
+db-seed: ## Seed placeholder data (legacy)
 	cd backend && uv run scripts/seed.py
+
+seed: ## Seed a test database (usage: make seed DB=lego [PASSWORD=postgres])
+	POSTGRES_PASSWORD=$(PASSWORD) ./bin/seed.sh $(DB)
+
+seed-all: ## Seed all test databases (usage: make seed-all [PASSWORD=postgres])
+	POSTGRES_PASSWORD=$(PASSWORD) ./bin/seed.sh --all
+
+seed-docker: ## Seed using docker-compose postgres (usage: make seed-docker DB=lego)
+	./bin/seed.sh --docker $(DB)
 
 pre-commit: ## Run pre-commit hooks on all files
 	pre-commit run --all-files

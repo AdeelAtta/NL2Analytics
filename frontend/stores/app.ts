@@ -25,7 +25,7 @@ export const useAppStore = create<AppState>()(
       setLoading: (loading) => set({ loading }),
     }),
     {
-      name: "openquery-app-store",
+      name: "schemaintern-app-store",
       partialize: (state) => ({ theme: state.theme, sidebarCollapsed: state.sidebarCollapsed }),
     },
   ),

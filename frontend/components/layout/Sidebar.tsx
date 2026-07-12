@@ -36,11 +36,9 @@ export function Sidebar() {
       )}
     >
       <div className="flex h-14 items-center gap-2 px-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
-          OQ
-        </div>
+        <img src="/schemaintern_logo.png" alt="SchemaIntern" className="h-8 w-8" />
         {!sidebarCollapsed && (
-          <span className="font-semibold text-sidebar-foreground">OpenQuery</span>
+          <span className="font-semibold text-sidebar-foreground">Schema<span className="text-primary">Intern</span></span>
         )}
       </div>
       <Separator />

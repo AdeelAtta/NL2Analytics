@@ -5,8 +5,11 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.auth.dependencies import get_current_user
+from app.core.database import get_session
 from ke.models.pipeline import PipelineResult
 from ke.services.pipeline import PipelineOrchestrator
+from ke.services.history import QueryHistoryService
+from ke.stores.query.repository import QueryHistoryRepository, QueryFeedbackRepository
 
 router = APIRouter(prefix="/api/v1/query", tags=["query"])
 
@@ -54,7 +57,6 @@ async def execute_query(
         return {"success": True, "preview": True, "schema": ddl, "tables": [t.name for t in intent.tables]}
 
     session_id = body.get("session_id")
-    session_id = body.get("session_id")
     dry_run = body.get("dry_run", True)
 
     result: PipelineResult = await orchestrator.execute(
@@ -63,6 +65,30 @@ async def execute_query(
         session_id=session_id,
         dry_run=dry_run,
     )
+
+    # Save to query history
+    try:
+        async with get_session() as session:
+            history_svc = QueryHistoryService(
+                history_repo=QueryHistoryRepository(session),
+                feedback_repo=QueryFeedbackRepository(session),
+            )
+            await history_svc.save(
+                tenant_id=tenant_id,
+                user_id=current_user.get("sub", ""),
+                query=query,
+                sql=result.sql or "",
+                status=result.status.value,
+                duration_ms=result.total_duration_ms,
+                model_tier=result.model_tier,
+                model_name=result.model_name,
+                guard_passed=result.guard_passed,
+                guard_stopped_at=result.guard_stopped_at,
+                stage_data=[s.model_dump() for s in result.stages],
+            )
+    except Exception:
+        import logging
+        logging.exception("Failed to save query history")
 
     resp = _pipeline_to_response(result)
     from ke.services.explain import explain_sql, extract_columns

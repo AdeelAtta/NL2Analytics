@@ -7,7 +7,7 @@ import { useAuthStore } from "@/stores/auth";
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8100/api/v1";
 
 interface HealthData {
-  status: string; database: string; redis: string; qdrant: string;
+  status: string; database: string;
 }
 
 export function AdminDashboard() {
@@ -24,9 +24,7 @@ export function AdminDashboard() {
 
   const services = [
     { name: "API Server", status: "healthy", icon: "🟢" },
-    { name: "PostgreSQL", status: health?.database ?? "unknown", icon: health?.database === "healthy" ? "🟢" : "🔴" },
-    { name: "Redis", status: health?.redis ?? "unknown", icon: health?.redis === "healthy" ? "🟢" : "🔴" },
-    { name: "Qdrant", status: health?.qdrant ?? "unknown", icon: health?.qdrant === "healthy" ? "🟢" : "🔴" },
+    { name: "Database", status: health?.database ?? "unknown", icon: health?.database === "healthy" ? "🟢" : "🔴" },
   ];
 
   return (

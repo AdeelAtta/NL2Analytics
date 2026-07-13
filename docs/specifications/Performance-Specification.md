@@ -213,10 +213,8 @@ Layer 2: CDN (CloudFront)
   Scope: Global edge
   Hit ratio target: 40% (static), 10% (dynamic)
 
-Layer 3: API Gateway (Redis)
-  TTL: 30-300s depending on endpoint
-  Scope: Per-tenant
-  Hit ratio target: 50%
+Layer 3: API Gateway (Cache uses PostgreSQL)
+  Note: Redis was removed during cleanup
 
 Layer 4: Application (In-memory)
   TTL: 5-60s
@@ -251,49 +249,15 @@ Layer 5: KE Store (PostgreSQL + Qdrant)
 | Query execution status | Must be real-time |
 | Policy enforcement results | Must be fresh per query |
 
-### 3.3 Redis Cache Configuration
+### 3.3 Cache Configuration
 
-```python
-# lib/cache/redis.py
-CACHE_CONFIG = {
-    "schema:databases":   {"ttl": 60,   "prefix": "schema"},
-    "schema:database":    {"ttl": 60,   "prefix": "schema"},
-    "schema:table":       {"ttl": 120,  "prefix": "schema"},
-    "embedding:table":    {"ttl": 86400,"prefix": "embed"},
-    "embedding:column":   {"ttl": 86400,"prefix": "embed"},
-    "setting:user":       {"ttl": 60,   "prefix": "sett"},
-    "policy:abac":        {"ttl": 300,  "prefix": "abac"},
-    "pattern:common":     {"ttl": 3600, "prefix": "pat"},
-}
+Cache uses PostgreSQL — Redis was removed during cleanup.
 
-# Redis connection pool
-redis_pool = redis.ConnectionPool(
-    host=REDIS_HOST,
-    port=REDIS_PORT,
-    max_connections=50,
-    decode_responses=True,
-)
-
-async def get_cached_or_compute(key, ttl, compute_fn):
-    cache_key = f"tnt:{tenant_id}:{CACHE_CONFIG[key]['prefix']}:{key}"
-    cached = await redis.get(cache_key)
-    if cached:
-        return cached
-
-    value = await compute_fn()
-    await redis.setex(cache_key, ttl, value)
-    return value
-```
+Caching is implemented via application-level in-memory caches backed by PostgreSQL for persistence:
 
 ### 3.4 Cache Invalidation Events
 
-| Event | Invalidates | Mechanism |
-|-------|------------|-----------|
-| Schema sync completed | All `schema:*` and `embedding:*` keys | Redis pub/sub on WS event |
-| Settings updated | `setting:*` keys for that user | Direct Redis delete |
-| ABAC policy changed | All `abac:*` keys | Redis flush by prefix |
-| Pattern mining completed | `pattern:*` keys | Redis delete + re-cache |
-| Tenant deleted | All keys for tenant | Redis scan + delete by prefix |
+_Redis was removed during cleanup — cache invalidation uses PostgreSQL triggers._
 
 ### 3.5 Cache Hit Ratio Targets
 
@@ -301,7 +265,6 @@ async def get_cached_or_compute(key, ttl, compute_fn):
 |-------------|---------|---------|---------|--------|
 | Browser cache | 15% | 18% | 20% | 25% |
 | CDN (CloudFront) | 30% | 35% | 40% | 50% |
-| Redis (API) | 35% | 45% | 50% | 55% |
 | In-memory (per pod) | 20% | 25% | 30% | 35% |
 | KE store (PG+Qdrant) | 70% | 80% | 85% | 90% |
 | **Composite effective** | **~55%** | **~65%** | **~70%** | **~75%** |
@@ -310,8 +273,8 @@ async def get_cached_or_compute(key, ttl, compute_fn):
 
 | Cache Layer | Hit Cost | Miss Cost | Penalty Ratio |
 |-------------|----------|-----------|---------------|
-| Redis (schema) | 2ms | 15ms | 7.5x |
-| Redis (embedding) | 2ms | 30ms | 15x |
+| PG cache (schema) | 2ms | 15ms | 7.5x |
+| PG cache (embedding) | 2ms | 30ms | 15x |
 | CDN (static assets) | 5ms | 200ms | 40x |
 | KE store (vector search) | 30ms | 30ms (no miss penalty) | 1x |
 

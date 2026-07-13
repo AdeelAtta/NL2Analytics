@@ -1,4 +1,4 @@
-# ADR-002: PostgreSQL + Qdrant as Primary Knowledge Stores
+# ADR-002: PostgreSQL + Qdrant as Primary Knowledge Stores (Qdrant later removed during cleanup)
 
 | Metadata | Value |
 |----------|-------|

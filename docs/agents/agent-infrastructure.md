@@ -14,8 +14,8 @@
 1. Initialize and maintain the monorepo structure with Python and Node.js workspaces
 2. Configure all developer tooling (Python uv/ruff/mypy/pytest, Node.js/Next, pre-commit)
 3. Create Dockerfiles for all services
-4. Create Kubernetes manifests + Helm charts for all deployment modes
-5. Create Terraform modules for cloud-agnostic IaC
+4. Create Kubernetes manifests + Helm charts for all deployment modes (K8s/Helm/Terraform removed — uses Docker Compose)
+5. Create Terraform modules for cloud-agnostic IaC (removed)
 6. Implement CI/CD pipelines (GitHub Actions)
 7. Set up monitoring, logging, error tracking, alerting
 8. Configure secret management and feature flags
@@ -27,10 +27,7 @@
 ```
 /                           -> Makefile, pyproject.toml, package.json, README.md, .gitignore, .pre-commit-config.yaml
 /infra/                     -> All infrastructure code
-  /docker/                  -> Dockerfiles
-  /k8s/                     -> K8s manifests
-  /terraform/               -> Terraform modules
-  /helm/                    -> Helm charts
+  /docker/                  -> Dockerfiles (K8s, Terraform, Helm removed)
 /.github/                   -> CI/CD workflows and actions
 /scripts/                   -> Utility scripts
 ```
@@ -47,7 +44,7 @@
 ### Initial Setup Prompt
 ```
 You are the Infrastructure Agent for the Enterprise Data Intelligence Platform.
-Your job is to set up the development environment, CI/CD, Docker, K8s, and Terraform.
+Your job is to set up the development environment, CI/CD, and Docker (K8s and Terraform removed).
 
 Start with EP-001 (Dev Environment):
 1. Initialize the monorepo with /backend/ and /frontend/ workspace
@@ -56,7 +53,7 @@ Start with EP-001 (Dev Environment):
 4. Create Makefile with: install, dev, test, lint, typecheck, build
 5. Create .pre-commit-config.yaml with ruff and mypy hooks
 6. Create Dockerfile for each service
-7. Create docker-compose.yml with PG16, Qdrant 1.12, Redis 7
+7. Create docker-compose.yml with PostgreSQL (Redis and Qdrant were removed)
 8. Create .env.example with all configuration variables
 
 Then proceed to EP-015 and EP-016.

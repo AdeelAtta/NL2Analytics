@@ -37,7 +37,7 @@ External Clients (UI, CLI, CI/CD, embedded, third-party)
                │
                ▼
          Knowledge Stores
-         (PostgreSQL, Qdrant)
+          (PostgreSQL only — Redis and Qdrant were removed)
 ```
 
 ### 1.2 Principles

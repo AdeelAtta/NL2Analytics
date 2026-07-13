@@ -10,6 +10,8 @@
 | **Version** | 1.0 |
 | **Cross-References** | [System-Architecture.md](./System-Architecture.md), [Component-Design.md](./Component-Design.md), [Data-Flow.md](./Data-Flow.md), [API-Design.md](./API-Design.md) |
 
+> **Note:** Redis and Qdrant were removed during cleanup — the stack uses PostgreSQL only. All references below to Qdrant (Vector Index, embeddings) and Redis (cache) are historical design records; the current implementation has removed these dependencies.
+
 ---
 
 ## 1. Overview
@@ -34,28 +36,28 @@ The Enterprise Knowledge Engine (EKE) is the single source of truth for all ente
 ### 1.2 Architecture
 
 ```
-                        ┌──────────────────────────────────┐
-                        │       KNOWLEDGE ENGINE API       │
-                        │  (FastAPI Service, port 8200)    │
-                        │  resolve / retrieve / ingest     │
-                        │  store / query / refresh         │
-                        └──────────┬───────────────────────┘
-                                   │
-              ┌────────────────────┼────────────────────┐
-              │                    │                    │
-              ▼                    ▼                    ▼
-   ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-   │  Knowledge Store  │  │   Vector Index   │  │   Knowledge      │
-   │  (PostgreSQL)     │  │   (Qdrant)       │  │   Pipeline       │
-   │                   │  │                  │  │   (Background)   │
-   │  • Schema Store   │  │  • Column emb.   │  │                   │
-   │  • Query History  │  │  • Business term │  │  • Ingestion     │
-   │  • Feedback       │  │  • Q&A pairs     │  │  • Enrichment    │
-   │  • Audit          │  │  • Doc chunks    │  │  • Validation    │
-   │  • Configuration  │  │                  │  │  • Refresh       │
-   │  • Metrics        │  └──────────────────┘  └──────────────────┘
-   │  • Knowledge Graph│
-   └──────────────────┘
+                         ┌──────────────────────────────────┐
+                         │       KNOWLEDGE ENGINE API       │
+                         │  (FastAPI Service, port 8200)    │
+                         │  resolve / retrieve / ingest     │
+                         │  store / query / refresh         │
+                         └──────────┬───────────────────────┘
+                                    │
+               ┌────────────────────┼────────────────────┐
+               │                    │                    │
+               ▼                    ▼                    ▼
+    ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+    │  Knowledge Store  │  │   Vector Index   │  │   Knowledge      │
+    │  (PostgreSQL)     │  │   (removed)      │  │   Pipeline       │
+    │                   │  │                  │  │   (Background)   │
+    │  • Schema Store   │  │  (Qdrant was     │  │                   │
+    │  • Query History  │  │   removed —      │  │  • Ingestion     │
+    │  • Feedback       │  │   PostgreSQL     │  │  • Enrichment    │
+    │  • Audit          │  │   only)          │  │  • Validation    │
+    │  • Configuration  │  │                  │  │  • Refresh       │
+    │  • Metrics        │  └──────────────────┘  └──────────────────┘
+    │  • Knowledge Graph│
+    └──────────────────┘
 ```
 
 ---
@@ -66,7 +68,7 @@ The Enterprise Knowledge Engine (EKE) is the single source of truth for all ente
 
 | Convention | Rule | Example |
 |-----------|------|---------|
-| **Tenant isolation** | All tables have `tenant_id` column. All Qdrant collections are per-tenant. | `tenant_id UUID NOT NULL` |
+| **Tenant isolation** | All tables have `tenant_id` column. | `tenant_id UUID NOT NULL` |
 | **Soft delete** | No destructive operations. `deleted_at TIMESTAMP` for deactivation. | `WHERE deleted_at IS NULL` |
 | **Audit fields** | Every row has `created_at`, `updated_at`. | `DEFAULT NOW()` |
 | **IDs** | UUID v7 (time-ordered) for all primary keys. | `id UUID PRIMARY KEY DEFAULT gen_random_uuid()` |
@@ -164,39 +166,16 @@ The Enterprise Knowledge Engine (EKE) is the single source of truth for all ente
 | `context_condition` | TEXT | Optional: term resolves differently per context (e.g., "North Europe" = specific countries) |
 | `created_at` | TIMESTAMPTZ | |
 
-### 2.4 Vector Index (Qdrant)
+### 2.4 Vector Index (removed)
 
-#### Collection: `column_embeddings`
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | UUID | Column ID (same as PostgreSQL) |
-| `vector` | FLOAT[1024] | BGE-M3 embedding of `column_name + description` |
-| `payload` | JSON | `{tenant_id, table_id, column_name, data_type, description, table_name}` |
-| **Index** | | HNSW, cosine distance, per-tenant filter |
+**Qdrant vector index was removed during cleanup.** The platform now relies on PostgreSQL-only storage. Previously planned collections were:
 
-#### Collection: `business_term_embeddings`
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | UUID | Business term ID |
-| `vector` | FLOAT[1024] | Embedding of `term + aliases + definition` |
-| `payload` | JSON | `{tenant_id, term, category}` |
-| **Index** | | HNSW, cosine distance, per-tenant filter |
+- `column_embeddings` — BGE-M3 embeddings of column names + descriptions
+- `business_term_embeddings` — Term → column mappings
+- `qa_pair_embeddings` — Question/SQL pairs
+- `doc_chunk_embeddings` — Documentation chunks
 
-#### Collection: `qa_pair_embeddings`
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | UUID | |
-| `vector` | FLOAT[1024] | Embedding of natural language question |
-| `payload` | JSON | `{tenant_id, question, sql, database_type, validated_by, accuracy}` |
-| **Index** | | HNSW, cosine distance, per-tenant filter |
-
-#### Collection: `doc_chunk_embeddings`
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | UUID | |
-| `vector` | FLOAT[1024] | Embedding of documentation chunk |
-| `payload` | JSON | `{tenant_id, source, chunk_text, url}` |
-| **Index** | | HNSW, cosine distance, per-tenant filter |
+All vector search functionality has been removed from the current scope.
 
 ### 2.5 Query History Store (PostgreSQL, Append-Only)
 
@@ -438,7 +417,6 @@ Ingest knowledge from a source.
   "tables_ingested": 5,
   "columns_ingested": 42,
   "relationships_detected": 3,
-  "embeddings_created": 42,
   "enrichment_queued": true,
   "latency_ms": 1200
 }
@@ -518,7 +496,6 @@ Refresh/enrich knowledge for a scope.
 {
   "refresh_id": "uuid",
   "descriptions_generated": 12,
-  "embeddings_updated": 42,
   "relationships_found": 2,
   "estimated_completion_s": 30
 }
@@ -546,8 +523,9 @@ Source Event ──► Ingestion Queue ──► Pipeline Worker ──► Knowl
                                ┌─────────┼─────────┐
                                │         │         │
                                ▼         ▼         ▼
-                          Schema      Embedding   Business
-                          Store       Index       Graph
+                          Schema      (Embedding   Business
+                          Store       Index —      Graph
+                                      removed)
 ```
 
 ### 4.2 Enrichment Pipeline
@@ -557,8 +535,8 @@ Raw Schema ──► Description Generator (LLM) ──► Relationship Inferenc
                                                      │
                                            ┌─────────┴─────────┐
                                            ▼                   ▼
-                                    Schema Store          Vector Index
-                                    (updated)             (new embeddings)
+                                    Schema Store          (Vector Index
+                                    (updated)              removed)
 ```
 
 ### 4.3 Refresh Triggers
@@ -577,7 +555,7 @@ Raw Schema ──► Description Generator (LLM) ──► Relationship Inferenc
 | Store | Retention | Cleanup Strategy |
 |-------|-----------|-------------------|
 | Schema Store | Indefinite | Soft delete on disconnect |
-| Vector Index | Indefinite | Rebuilt on refresh |
+| Vector Index (removed) | Indefinite | Was rebuilt on refresh |
 | Query History | 12 months (Pro), 24 months (Enterprise) | Partition drop |
 | Feedback | Indefinite | — |
 | Audit Log | 12 months (SOC 2 minimum) | Partition drop / archive |
@@ -595,15 +573,15 @@ Raw Schema ──► Description Generator (LLM) ──► Relationship Inferenc
 | Query history writes | Eventual (async) | Query logging must not block user response |
 | Feedback writes | Strong | Feedback must be immediately available for learning |
 | Audit writes | Strong + durable | Immutable, must survive crashes |
-| Vector index reads | Eventually consistent | Slight staleness acceptable for semantic search |
-| Vector index writes | Async batch | Embedding generation is compute-intensive |
+| Vector index reads (removed) | Eventually consistent | Was: slight staleness acceptable for semantic search |
+| Vector index writes (removed) | Async batch | Was: embedding generation is compute-intensive |
 
 ### 5.2 Performance Budgets
 
 | Operation | Target P95 | Target P99 |
 |-----------|-----------|-----------|
 | `resolve` | 100ms | 200ms |
-| `retrieve` (vector) | 50ms | 100ms |
+| `retrieve` (vector — removed) | 50ms | 100ms |
 | `retrieve` (structured) | 20ms | 50ms |
 | `ingest` (DDL, 100 tables) | 30s | 60s |
 | `store` (query log) | 10ms | 25ms |
@@ -614,10 +592,10 @@ Raw Schema ──► Description Generator (LLM) ──► Relationship Inferenc
 
 | Cache | What | TTL | Invalidation |
 |-------|------|-----|-------------|
-| Schema metadata (Redis) | Table/column lists per database | 60s | On schema change event |
-| Business term resolution (Redis) | Term → column mappings | 300s | On term update event |
-| Embedding cache (in-memory) | Frequent query embeddings | 60s | LRU eviction |
-| RBAC policies (Redis) | User → permissions | 60s | On policy change event |
+| Schema metadata (removed — was Redis) | Table/column lists per database | 60s | On schema change event |
+| Business term resolution (removed — was Redis) | Term → column mappings | 300s | On term update event |
+| Embedding cache (in-memory, removed) | Frequent query embeddings | 60s | LRU eviction |
+| RBAC policies (removed — was Redis) | User → permissions | 60s | On policy change event |
 
 ---
 
@@ -628,15 +606,15 @@ Raw Schema ──► Description Generator (LLM) ──► Relationship Inferenc
 | Store | Availability Requirement | Failure Mode |
 |-------|--------------------------|--------------|
 | PostgreSQL (primary) | High (HA cluster) | Read-only mode on failover; writes queued |
-| Qdrant | High (HA cluster) | Degraded to keyword-only search |
-| Redis (cache) | Medium | Schema queries fall back to PostgreSQL direct reads |
+| Qdrant (removed) | High (HA cluster) | Was: degraded to keyword-only search |
+| Redis (removed) | Medium | Was: schema queries fall back to PostgreSQL direct reads |
 
 ### 6.2 What the Knowledge Engine Provides to Components
 
 | Component | Depends On | Guarantee |
 |-----------|------------|-----------|
 | Schema Intelligence | Write access to all stores | Schema writes are durable |
-| Context Retriever | Read access to vector + schema + history | Retrieval latency < 100ms P95 |
+| Context Retriever | Read access to schema + history | Retrieval latency < 100ms P95 |
 | Query Planner | Read access to graph + metrics + schema | Resolution latency < 100ms P95 |
 | NL2SQL Generator | Read access to context (via Retriever) | Context packaged in < 200ms |
 | Guardrail Stack | Read access to schema + config + audit | Policy checks < 50ms |

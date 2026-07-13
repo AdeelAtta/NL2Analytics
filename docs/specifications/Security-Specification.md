@@ -488,7 +488,7 @@ class ABACEngine:
 
 ### 6.5 ABAC Cache
 
-ABAC policies are cached in Redis with 5-minute TTL. Policy changes propagate via WebSocket event to invalidate cache.
+ABAC policies are cached in-memory with 5-minute TTL. Redis was removed during cleanup — rate limiting uses in-memory counters.
 
 ---
 
@@ -502,7 +502,7 @@ ABAC policies are cached in Redis with 5-minute TTL. Policy changes propagate vi
 | PostgreSQL (RDS) | RDS encryption | AWS KMS (customer-managed) | AES-256 |
 | PostgreSQL (on-prem) | LUKS + PG data encryption | Vault Transit | AES-256-GCM |
 | Qdrant | Disk encryption + payload encryption | K8s Secret -> env var | AES-256-GCM |
-| Redis | AUTH + TLS (no at-rest encryption needed) | N/A | N/A |
+| Redis | Removed during cleanup — Redis not in use | N/A | N/A |
 | S3 (backups) | Server-side encryption (SSE-S3) | AWS KMS | AES-256 |
 | S3 (audit logs) | Server-side encryption (SSE-KMS) | AWS KMS | AES-256 |
 | EBS volumes | EBS encryption (default) | AWS KMS | AES-256 |
@@ -516,7 +516,7 @@ ABAC policies are cached in Redis with 5-minute TTL. Policy changes propagate vi
 | API -> KE API (internal) | mTLS (Linkerd) | TLS_AES_256_GCM_SHA384 | Linkerd identity (24h) |
 | API -> PostgreSQL | TLS 1.3 | TLS_AES_256_GCM_SHA384 | RDS CA bundle |
 | API -> Qdrant | TLS 1.3 | TLS_AES_256_GCM_SHA384 | Self-signed (internal CA) |
-| API -> Redis | TLS 1.2 | TLS_AES_256_GCM_SHA384 | Self-signed (internal CA) |
+| API -> Redis | Removed during cleanup — Redis not in use | | |
 | Service -> Vault | TLS 1.3 | TLS_AES_256_GCM_SHA384 | Vault CA |
 | Pod -> Pod (mesh) | mTLS (Linkerd) | TLS_AES_256_GCM_SHA384 | Linkerd identity |
 
@@ -674,7 +674,7 @@ vault read transit/keys/jwt-signing
 | Application | Single process (tenant-aware) | Single process | Separate pods | Separate pods |
 | Database | RLS (row-level security) | Separate RDS instance | Customer RDS | Customer PG |
 | Vector DB | Per-tenant collection | Per-tenant cluster | Customer Qdrant | Customer Qdrant |
-| Cache | Key prefixed with tenant_id | Separate Redis | Customer Redis | Customer Redis |
+| Cache | In-memory (per-process) | In-memory (per-process) | In-memory (per-process) | In-memory (per-process) |
 | Storage | S3 prefix per tenant | S3 prefix per tenant | Customer S3 | Local storage |
 | Audit | tenant_id field | tenant_id field | tenant_id field | tenant_id field |
 
@@ -728,15 +728,7 @@ client.search(
 
 ### 10.4 Cache Isolation
 
-```python
-# Redis key prefixing
-def tenant_key(tenant_id: str, key: str) -> str:
-    return f"tnt:{tenant_id}:{key}"
-
-# Usage
-await redis.set(tenant_key(tenant_id, "schema:users"), schema_data)
-await redis.get(tenant_key(tenant_id, "schema:users"))
-```
+Redis was removed — cache isolation uses in-memory tenant-prefixed keys.
 
 ### 10.5 Cross-Tenant Attack Prevention
 

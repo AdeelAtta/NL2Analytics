@@ -10,6 +10,8 @@
 | **Version** | 1.0 |
 | **Cross-References** | [Knowledge-Engine.md](./Knowledge-Engine.md), [Component-Design.md](./Component-Design.md), [Data-Flow.md](./Data-Flow.md), [API-Design.md](./API-Design.md), [Deployment-Architecture.md](./Deployment-Architecture.md) |
 
+> **Note:** Redis and Qdrant were removed during cleanup — the stack uses PostgreSQL only. All references below to Redis/Qdrant/vector search are historical design documents; the current implementation has removed these dependencies.
+
 ---
 
 ## 1. Architectural Philosophy
@@ -89,7 +91,7 @@ The Knowledge Engine is not a single database. It is a **layered knowledge syste
 | Store | Technology | Content | Purpose |
 |-------|-----------|---------|---------|
 | **Schema Store** | PostgreSQL | Tables, columns, types, constraints, relationships, indexes | Structured schema metadata. Source of truth for database structure. |
-| **Vector Index** | Qdrant | Column embeddings, business term embeddings, Q&A pair embeddings | Semantic search. Find relevant schema elements by meaning, not name. |
+| **Vector Index** | (removed) | Formerly Qdrant — removed during cleanup. Semantic search was planned via column embeddings. | Superseded — the stack uses PostgreSQL only. |
 | **Knowledge Graph** | PostgreSQL with recursive CTEs + adjacency | Business terms → schema elements, metric definitions, join paths | Business-level understanding. Resolve "revenue" to the correct columns across databases. |
 | **Query History Store** | PostgreSQL (time-series partitioned) | Queries, results, execution metadata, performance stats | Pattern mining, learning, cost analysis. |
 | **Feedback Store** | PostgreSQL | Corrections, approvals, ratings, user comments | Learning signal. Quality measurement. |
@@ -152,13 +154,13 @@ Every component is classified by its relationship to the Knowledge Engine:
 
 | Component | Role | Knowledge Engine Consumption | Knowledge Engine Production |
 |-----------|------|------------------------------|----------------------------|
-| Schema Intelligence | Producer | Reads raw DDL from databases | Writes schema store, vector index, knowledge graph |
-| Context Retriever | Consumer | Reads schema store, vector index, query history | — |
+| Schema Intelligence | Producer | Reads raw DDL from databases | Writes schema store, knowledge graph |
+| Context Retriever | Consumer | Reads schema store, query history | — |
 | Query Planner | Consumer | Reads knowledge graph, schema store, metric store | — |
 | NL2SQL Generator | Consumer | Reads context retriever output, planner output | — |
 | Policy Enforcement | Consumer | Reads schema store, configuration store, RBAC policies | Writes audit store |
 | Executor | Consumer + Producer | Reads policy enforcement output | Writes query history store, audit store |
-| Learning Loop | Consumer + Producer | Reads feedback store, query history store | Writes vector index, knowledge graph, prompt store |
+| Learning Loop | Consumer + Producer | Reads feedback store, query history store | Writes knowledge graph, prompt store |
 | API Layer | Consumer + Producer | Reads all stores (via API) | Writes knowledge engine API |
 | UI | Consumer | Reads API layer | Writes API layer (user input) |
 | Feedback Collector | Producer | — | Writes feedback store |
@@ -174,7 +176,7 @@ Databases ──► Connector ──► DDL Parser ──► Schema Store
                         │         │
                         └────┬────┘
                              ▼
-                      Vector Index    Knowledge Graph
+                      Knowledge Graph
 ```
 
 | Sub-Component | Function | Output |
@@ -183,7 +185,7 @@ Databases ──► Connector ──► DDL Parser ──► Schema Store
 | **DDL Parser** | Parse DDL into structured schema metadata | Schema objects, constraints, types |
 | **Name Annotator** | LLM generates business descriptions for cryptic names | Column descriptions, table summaries |
 | **Relationship Inferer** | Detect foreign key relationships from naming patterns + query history | Suggested joins, relationship confidence |
-| **Embedder** | Create embeddings for schema elements + descriptions | Vector index entries |
+| **Embedder** | Create embeddings for schema elements + descriptions (removed with Qdrant) | Vector index entries |
 | **Graph Builder** | Link business terms → schema elements in knowledge graph | Knowledge graph entries |
 
 ### 3.2 Context Retriever (Consumer)
@@ -192,7 +194,6 @@ Databases ──► Connector ──► DDL Parser ──► Schema Store
 User Query ──► Query Analyzer ──► Retriever ──► Ranker ──► Context
                                         │
                                    Schema Store
-                                   Vector Index
                                    Query History
 ```
 
@@ -360,10 +361,10 @@ The architecture supports five deployment modes with zero code changes:
 
 | Mode | Knowledge Engine Location | Inference Location | Database Connectivity |
 |------|---------------------------|--------------------|----------------------|
-| **Cloud SaaS** | Managed PostgreSQL + Qdrant on K8s | Self-hosted GPUs on K8s | Outbound to customer DB |
-| **Dedicated Cloud** | Per-tenant PostgreSQL + Qdrant | Per-tenant GPU pool | Outbound to customer DB |
+| **Cloud SaaS** | Managed PostgreSQL on K8s | Self-hosted GPUs on K8s | Outbound to customer DB |
+| **Dedicated Cloud** | Per-tenant PostgreSQL | Per-tenant GPU pool | Outbound to customer DB |
 | **Customer VPC** | Deployed in customer's cloud account | Customer's GPU or cloud API | In-VPC connections |
-| **On-Prem K8s** | Customer-managed PostgreSQL + Qdrant on their K8s | Customer GPU (AMD/NVIDIA) | Internal network |
+| **On-Prem K8s** | Customer-managed PostgreSQL on their K8s | Customer GPU (AMD/NVIDIA) | Internal network |
 | **Air-Gapped** | Fully self-contained, no external dependencies | Customer GPU | Internal network |
 
 **Key**: The Knowledge Engine is always self-hosted. No external API dependencies for core functionality.
@@ -377,15 +378,15 @@ The architecture supports five deployment modes with zero code changes:
 | Component | Technology | Rationale |
 |-----------|------------|-----------|
 | **Schema Intelligence** | Python 3.12, SQLAlchemy, LangGraph | Python for AI ecosystem. SQLAlchemy for DB abstraction. LangGraph for multi-step pipeline. |
-| **Context Retriever** | Qdrant client, LangChain, PostgreSQL | Hybrid search (dense + sparse). Qdrant for vector, PostgreSQL for structured filters. |
+| **Context Retriever** | LangChain, PostgreSQL | Qdrant removed — search uses PostgreSQL full-text. |
 | **Query Planner** | LangGraph, Python | DAG-based planning with conditional branching. |
 | **NL2SQL Generator** | LangGraph, vLLM, SGLang | Multi-agent pipeline. vLLM for inference serving. SGLang for structured output. |
 | **Guardrail Stack** | Python, SQL parser (sqlparse/sqlglot) | Deterministic. No ML dependency for core layers. |
 | **Executor** | Python, SQLAlchemy, asyncpg/psycopg | Connection pooling, async execution. |
-| **Learning Loop** | Python, LangGraph, Qdrant | Pipeline orchestration, embedding updates. |
+| **Learning Loop** | Python, LangGraph | Pipeline orchestration (Qdrant removed). |
 | **API Layer** | FastAPI, Python 3.12 | Async, auto-docs, Pydantic validation. |
 | **UI** | React 19, Next.js 15, shadcn/ui, Tailwind CSS | Modern, accessible, server-side rendering. |
-| **Knowledge Stores** | PostgreSQL 16, Qdrant, (future: Neo4j) | PostgreSQL for structured, Qdrant for vector. |
+| **Knowledge Stores** | PostgreSQL 16 | Qdrant was removed — PostgreSQL only. |
 | **Auth** | Auth0 / Clerk | SOC 2 compliant, SSO support. |
 | **Infrastructure** | Kubernetes, Docker, Terraform | Cloud-agnostic, IaC. |
 
@@ -399,7 +400,7 @@ The architecture supports five deployment modes with zero code changes:
 
 | Concern | Approach |
 |---------|----------|
-| **Data isolation** | Row-level tenant IDs in shared PostgreSQL + per-tenant Qdrant collections |
+| **Data isolation** | Row-level tenant IDs in shared PostgreSQL |
 | **Performance isolation** | Kubernetes pod resource limits + query cost ceilings per tenant |
 | **Configuration isolation** | Per-tenant configuration records in Configuration Store |
 | **Inference isolation** | Tenant-aware model routing; optional dedicated GPU pools for premium tenants |
@@ -429,7 +430,7 @@ The architecture supports five deployment modes with zero code changes:
 
 | Component | Scalability Strategy |
 |-----------|---------------------|
-| **Knowledge Engine reads** | Read replicas for PostgreSQL, Qdrant horizontal scaling |
+| **Knowledge Engine reads** | Read replicas for PostgreSQL |
 | **Knowledge Engine writes** | Write master with async replication |
 | **Schema Intelligence** | Horizontally scalable ingestion workers |
 | **Context Retriever** | Stateless, horizontally scalable |
@@ -437,7 +438,7 @@ The architecture supports five deployment modes with zero code changes:
 | **NL2SQL Generator** | GPU-bound. Horizontal scaling with GPU pods. |
 | **Guardrail Stack** | Stateless, horizontally scalable |
 | **Executor** | Connection pool per tenant. Horizontally scalable workers. |
-| **Learning Loop** | Queue-based (Redis/Kafka), horizontally scalable workers |
+| **Learning Loop** | Queue-based (Kafka), horizontally scalable workers |
 | **API Layer** | Stateless, horizontally scalable behind load balancer |
 
 ---
@@ -465,7 +466,7 @@ Each evolution adds new **knowledge types** and new **consumers/producers** — 
 | ADR | Decision | Rationale | Alternatives Considered |
 |-----|----------|-----------|------------------------|
 | ADR-001 | Knowledge Engine is the single architectural core | All components must be consumers/producers of a unified knowledge system. Prevents pipeline-centric design that can't evolve. | Pipeline-centric architecture (rejected: brittle, can't evolve to platform) |
-| ADR-002 | PostgreSQL + Qdrant as primary knowledge stores | PostgreSQL handles structured + graph data. Qdrant handles vector search. No need for dedicated graph DB in MVP. | Neo4j (rejected: over-engineered for MVP, adds operational complexity), Pinecone (rejected: cloud-only, violates deployment-agnostic principle) |
+| ADR-002 | PostgreSQL only (Qdrant removed) | Qdrant was removed in cleanup — PostgreSQL handles all knowledge stores. No dedicated graph DB in MVP. | Neo4j (rejected: over-engineered for MVP, adds operational complexity), Pinecone (rejected: cloud-only, violates deployment-agnostic principle) |
 | ADR-003 | Components are stateless executors | All state lives in the Knowledge Engine. Components can be killed and restarted without data loss. Scales horizontally. | Stateful components (rejected: complicates scaling, deployment) |
 | ADR-004 | Knowledge Engine API is the only internal interface | No component talks to another component directly. No component reads a knowledge store directly. Enforces loose coupling. | Direct inter-component communication (rejected: tight coupling, hard to evolve) |
 | ADR-005 | Self-hosted knowledge stores only | Core system must work in air-gapped environments. No external API dependency for Knowledge Engine operation. | Cloud-managed stores (rejected: violates deployment-agnostic principle) |

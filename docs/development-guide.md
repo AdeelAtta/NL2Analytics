@@ -4,7 +4,7 @@
 
 - **Python 3.12+** — Runtime for backend services
 - **Node.js 20+** — Runtime for frontend application
-- **Docker & Docker Compose** — Infrastructure services (PostgreSQL, Redis, Qdrant)
+- **Docker & Docker Compose** — Infrastructure services (PostgreSQL)
 - **uv** — Python package manager (`pip install uv`)
 - **pnpm** — Preferred Node.js package manager (`npm install -g pnpm`)
 
@@ -14,7 +14,7 @@
 
 ```bash
 git clone <repo-url>
-cd openquery
+cd schemaintern
 ```
 
 ### 2. Install Dependencies
@@ -38,7 +38,7 @@ Edit `.env` to match your local setup. Defaults work for local development.
 ### 4. Start Infrastructure Services
 
 ```bash
-docker compose -f infra/docker/docker-compose.yml up -d postgres redis qdrant
+docker compose -f infra/docker/docker-compose.yml up -d postgres
 ```
 
 ### 5. Run Database Migrations
@@ -78,9 +78,8 @@ Starts Next.js dev server on port 3000.
 ### All Services
 
 ```bash
-# Start everything
-docker compose -f infra/docker/docker-compose.yml up -d
-make dev               # backend + frontend
+# Start everything (postgres, backend, frontend)
+make dev
 
 # Stop everything
 make down
@@ -209,9 +208,7 @@ chore(deps): upgrade fastapi to 0.115.0
 
 ### Databases
 
-- **PostgreSQL**: `psql -h localhost -U openquery -d openquery`
-- **Redis**: `redis-cli -h localhost -p 6379`
-- **Qdrant**: REST API at `http://localhost:6333/dashboard`
+- **PostgreSQL**: `psql -h localhost -U schemaintern -d schemaintern`
 
 ### Observability
 
@@ -226,21 +223,22 @@ See the [Troubleshooting Guide](docs/troubleshooting.md) for solutions to common
 ## Project Structure
 
 ```
-openquery/
-├── backend/            # Python FastAPI services
-│   ├── public-api/     # External API (port 8100)
-│   ├── ke-api/         # Knowledge Engine API (port 8200, internal)
-│   ├── query-pipeline/ # NL2SQL agent pipeline
-│   ├── schema-intel/   # Schema intelligence workers
-│   ├── learning-loop/  # Self-learning workers
-│   ├── auth/           # Authentication service
-│   └── lib/            # Shared Python libraries
-├── frontend/           # Next.js application
-├── infra/              # Infrastructure
-│   ├── docker/         # Dockerfiles and Compose
-│   ├── k8s/            # Kubernetes manifests
-│   ├── terraform/      # Terraform modules
-│   └── helm/           # Helm charts
-├── shared/             # Shared type definitions
-└── docs/               # Documentation
+schemaintern/
+├── backend/               # Python FastAPI backend
+│   ├── app/               # External API (port 8100) — auth, query, schema
+│   ├── ke/                # Knowledge Engine API (port 8200)
+│   ├── schema_intelligence/  # Schema discovery & annotation
+│   ├── shared/            # Shared Pydantic models
+│   ├── alembic/           # DB migrations
+│   ├── scripts/           # Utility scripts
+│   ├── tests/             # Backend tests
+│   └── data/              # File-based storage (users, tenants)
+├── frontend/              # Next.js application (port 3000)
+├── infra/                 # Infrastructure
+│   ├── docker/            # Dockerfiles and Compose
+│   ├── grafana/           # Grafana dashboards
+│   └── scripts/           # Utility scripts
+├── tests/                 # Root integration/unit tests
+├── docs/                  # Documentation
+└── test-databases/        # SQL seed data
 ```

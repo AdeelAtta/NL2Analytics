@@ -50,7 +50,7 @@ Discover, infer, and enrich database schema knowledge. This is the **primary kno
 |-----------|-----------|-------------|
 | `ingest("ddl_introspection", data)` | Write | Store raw schema metadata |
 | `refresh("descriptions", database_id)` | Write | Trigger LLM-based description generation |
-| `refresh("embeddings", database_id)` | Write | Rebuild vector index for schema elements |
+| `refresh("embeddings", database_id)` | Write | Rebuild vector index for schema elements (vector index removed) |
 | `refresh("relationships", database_id)` | Write | Run relationship inference |
 | `query("schema", filters)` | Read | Check existing schema state |
 
@@ -64,11 +64,10 @@ Database ──► Connector ──► DDL Parser ──► Diff Engine ──�
                                  Name Annotator      Relationship Inferer
                                         │                   │
                                         └─────────┬─────────┘
-                                                  ▼
-                                            Embedder ──► Vector Index
-                                                  │
-                                                  ▼
-                                           Graph Builder ──► Knowledge Graph
+                                                    ▼
+                                             Embedder ──► Vector Index [REMOVED]
+                                                                       
+                                            Graph Builder ──► Knowledge Graph
 ```
 
 ### 2.4 Sub-Components
@@ -134,7 +133,7 @@ Extracts:
 | **Input** | `column_name + " " + table_name + " " + description` |
 | **Output** | Float vector [1024] |
 | **Batch size** | 100 texts per batch |
-| **Storage** | Upsert to Qdrant `column_embeddings` collection |
+| **Storage** | Upsert to Qdrant `column_embeddings` collection (Qdrant removed) |
 
 #### Graph Builder
 
@@ -203,7 +202,7 @@ NL Query ──► Query Analyzer ──► Query Rewriter ──► Hybrid Retr
 
 | Property | Value |
 |----------|-------|
-| **Strategies** | 1. **Vector search** (Qdrant): semantic similarity to column embeddings, QA pair embeddings, doc embeddings. 2. **Keyword search** (PostgreSQL full-text): `tsvector` on column names + descriptions. 3. **Query history match**: find similar previous queries and their successful SQL. |
+| **Strategies** | 1. **Vector search** (Qdrant — removed): semantic similarity to column embeddings, QA pair embeddings, doc embeddings. 2. **Keyword search** (PostgreSQL full-text): `tsvector` on column names + descriptions. 3. **Query history match**: find similar previous queries and their successful SQL. |
 | **Top-K per strategy** | Vector: 20, Keyword: 10, History: 5 |
 | **Fusion** | Reciprocal Rank Fusion (RRF) across strategy results |
 | **Filters applied** | Tenant ID, database scope, data type, PII flag, confidence threshold |
@@ -843,7 +842,7 @@ Human interface to the platform. Consumes the API Layer, which consumes the Know
           └───────┬────────┘
                   │
           ┌───────┴────────┐
-          │ Stores (PG+Qd) │
+          │ Stores (PG) — Qdrant removed │
           └────────────────┘
 ```
 

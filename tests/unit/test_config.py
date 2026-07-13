@@ -10,7 +10,7 @@ from app.core.config import Settings, get_settings
 
 def test_settings_default_app_name() -> None:
     settings = Settings()
-    assert settings.app_name == "UPL Backend"
+    assert settings.app_name == "SchemaIntern Backend"
 
 
 def test_settings_default_debug() -> None:
@@ -26,11 +26,6 @@ def test_settings_default_version() -> None:
 def test_settings_default_postgres_dsn() -> None:
     settings = Settings()
     assert "postgresql+asyncpg://" in settings.postgres_dsn
-
-
-def test_settings_default_redis_url() -> None:
-    settings = Settings()
-    assert settings.redis_url == "redis://localhost:6379/0"
 
 
 def test_settings_get_settings_singleton() -> None:

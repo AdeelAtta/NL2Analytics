@@ -6,7 +6,7 @@ from app.core.config import Settings, get_settings
 class TestConfig:
     def test_settings_defaults(self) -> None:
         settings = Settings()
-        assert settings.app_name == "UPL Backend"
+        assert settings.app_name == "SchemaIntern Backend"
         assert settings.app_version == "0.1.0"
         assert settings.debug is False
         assert settings.environment == "development"

@@ -8,25 +8,25 @@
 
 ### Vanna.ai
 - **Approach:** RAG over schema information + LLM generation
-- **OpenQuery advantage:** 10-layer guardrail stack (Vanna has minimal validation), self-learning loop, multi-DB connectors, multi-tier model routing
+- **SchemaIntern advantage:** 10-layer guardrail stack (Vanna has minimal validation), self-learning loop, multi-DB connectors, multi-tier model routing
 - **Vanna advantage:** More mature, larger community, simpler setup, proven accuracy benchmarks
-- **Verdict:** OpenQuery has superior architecture but Vanna has execution advantage
+- **Verdict:** SchemaIntern has superior architecture but Vanna has execution advantage
 
 ### Dataherald
 - **Approach:** Enterprise NL2SQL API with fine-tuned models
-- **OpenQuery advantage:** Open-source stack, self-learning, broader DB support, hybrid retrieval
+- **SchemaIntern advantage:** Open-source stack, self-learning, broader DB support, hybrid retrieval
 - **Dataherald advantage:** Enterprise-ready managed service, SLAs, SOC 2
-- **Verdict:** Dataherald is ahead on enterprise readiness; OpenQuery ahead on architecture
+- **Verdict:** Dataherald is ahead on enterprise readiness; SchemaIntern ahead on architecture
 
 ### LangChain SQL Agent
 - **Approach:** LangChain toolkit for Text-to-SQL
-- **OpenQuery advantage:** Purpose-built for SQL (not general-purpose agent), deterministic guardrails, production-hardened, no LangChain dependency
+- **SchemaIntern advantage:** Purpose-built for SQL (not general-purpose agent), deterministic guardrails, production-hardened, no LangChain dependency
 - **LangChain advantage:** Massive ecosystem, flexibility, rapid prototyping
-- **Verdict:** OpenQuery is more production-ready; LangChain is more flexible
+- **Verdict:** SchemaIntern is more production-ready; LangChain is more flexible
 
 ## 2. Platform Competitors
 
-| Platform | Key Strength | OpenQuery Response |
+| Platform | Key Strength | SchemaIntern Response |
 |----------|-------------|-------------------|
 | Snowflake Cortex | Deep integration, managed | Multi-cloud, any DB |
 | Databricks AI | Lakehouse, Unity Catalog | Open architecture, no vendor lock-in |
@@ -35,7 +35,7 @@
 
 ## 3. Competitive Advantage Summary
 
-| Factor | OpenQuery | Competitors |
+| Factor | SchemaIntern | Competitors |
 |--------|-----------|-------------|
 | SQL Injection Protection | ✅ 4-layer defense | ❌ Most have none |
 | Multi-DB Support | ✅ 5 connectors | ⚠️ 1-2 typically |

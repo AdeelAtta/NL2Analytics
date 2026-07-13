@@ -1,6 +1,6 @@
 # Disaster Recovery Plan
 
-**Project:** OpenQuery | **Date:** 2026-07-11 | **Severity:** CRITICAL
+**Project:** SchemaIntern | **Date:** 2026-07-11 | **Severity:** CRITICAL
 
 ---
 
@@ -57,7 +57,7 @@ aws rds restore-db-instance-from-db-snapshot \
 | PostgreSQL | WAL streaming to S3 | Continuous | 7 days | S3 `upl-db-wal/` |
 | Redis | No persistent backup | — | — | Rebuild from PG data |
 | Qdrant | Snapshot API | Daily | 7 days | EBS volume snapshots |
-| K8s manifests | Git (infra/k8s/) | On commit | Full history | GitHub |
+| K8s manifests | Git | On commit | Full history | GitHub |
 | Terraform state | S3 backend | On apply | Full history | S3 `upl-terraform-state/` |
 | Application config | `.env` in secrets manager | On change | — | AWS Secrets Manager |
 
@@ -97,11 +97,11 @@ aws rds restore-db-instance-from-db-snapshot \
 # 2. Point application to new DB
 aws secretsmanager update-secret \
   --secret-id upl/prod/database \
-  --secret-string "postgresql+asyncpg://user:pass@upl-prod-restored.xyz.us-east-1.rds.amazonaws.com:5432/openquery"
+  --secret-string "postgresql+asyncpg://user:pass@upl-prod-restored.xyz.us-east-1.rds.amazonaws.com:5432/schemaintern"
 
 # 3. Roll Kubernetes pods to pick up new secrets
-kubectl rollout restart deployment/backend -n openquery
-kubectl rollout restart deployment/frontend -n openquery
+kubectl rollout restart deployment/backend -n schemaintern
+kubectl rollout restart deployment/frontend -n schemaintern
 
 # 4. Re-embed schemas into Qdrant
 curl -X POST http://backend:8100/api/v1/connections/resync-all \
@@ -121,8 +121,8 @@ aws rds restore-db-instance-to-point-in-time \
   --restore-time "2026-07-11T14:30:00"
 
 # 3. Export corrupted data, re-import clean data
-pg_dump -h upl-prod-pitr -U openquery openquery > clean_dump.sql
-psql -h upl-prod -U openquery openquery < clean_dump.sql
+pg_dump -h upl-prod-pitr -U schemaintern schemaintern > clean_dump.sql
+psql -h upl-prod -U schemaintern schemaintern < clean_dump.sql
 ```
 
 ## 5. Cross-Region Disaster Recovery
@@ -152,7 +152,7 @@ aws route53 change-resource-record-sets \
     "Changes": [{
       "Action": "UPSERT",
       "ResourceRecordSet": {
-        "Name": "app.openquery.io",
+        "Name": "app.schemaintern.io",
         "Type": "A",
         "AliasTarget": {
           "HostedZoneId": "DR_ALB_ZONE_ID",
@@ -164,11 +164,11 @@ aws route53 change-resource-record-sets \
   }'
 
 # 3. Scale up DR EKS
-kubectl scale deployment backend --replicas=3 -n openquery
-kubectl scale deployment frontend --replicas=3 -n openquery
+kubectl scale deployment backend --replicas=3 -n schemaintern
+kubectl scale deployment frontend --replicas=3 -n schemaintern
 
 # 4. Verify
-curl https://app.openquery.io/api/v1/health/ready
+curl https://app.schemaintern.io/api/v1/health/ready
 ```
 
 ## 6. Communication Plan

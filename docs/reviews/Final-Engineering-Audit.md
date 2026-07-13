@@ -1,6 +1,6 @@
 # Final Engineering Audit
 
-**Project:** OpenQuery — Enterprise Data Intelligence Platform
+**Project:** SchemaIntern — Enterprise Data Intelligence Platform
 **Date:** 2026-07-11
 **Auditor:** Independent Engineering Audit Team
 **Release Decision:** ❌ **FAIL**

@@ -17,7 +17,7 @@
 
 ## 2. Competitive Positioning
 
-| Competitor | Strengths | OpenQuery Position |
+| Competitor | Strengths | SchemaIntern Position |
 |-----------|-----------|-------------------|
 | Snowflake Cortex | Deep Snowflake integration, managed service | Cannot compete on integration. Differentiator: multi-DB support, self-learning. |
 | Databricks AI | Lakehouse architecture, Unity Catalog | Cannot compete on data platform. Differentiator: open-source stack, any DB. |

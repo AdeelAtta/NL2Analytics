@@ -139,6 +139,12 @@ async def sync_and_extract(
             )
             anno_service = AnnotationService(annotator=llm_annotator)
         else:
+            import logging
+            logging.getLogger(__name__).warning(
+                "HF_TOKEN not set — skipping LLM annotation. "
+                "Table/column descriptions will be empty. "
+                "Set HF_TOKEN in .env.dev or .env.prod for AI-generated descriptions."
+            )
             anno_service = None
         orchestrator = SyncOrchestrator(annotation_service=anno_service)
         result = await orchestrator.sync(_make_config(body, 30), db_type=body.db_type)

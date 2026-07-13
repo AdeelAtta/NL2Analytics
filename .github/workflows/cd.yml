@@ -56,11 +56,4 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy to Kubernetes
-        run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
-          kubectl set image deployment/backend backend=${{ env.REGISTRY }}/${{ github.repository }}/backend:${{ env.IMAGE_TAG }} -n openquery
-          kubectl set image deployment/frontend frontend=${{ env.REGISTRY }}/${{ github.repository }}/frontend:${{ env.IMAGE_TAG }} -n openquery
-          kubectl rollout status deployment/backend -n openquery --timeout=5m
-          kubectl rollout status deployment/frontend -n openquery --timeout=5m
+

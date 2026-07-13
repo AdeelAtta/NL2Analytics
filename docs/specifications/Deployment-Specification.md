@@ -20,28 +20,26 @@
 3. [Docker Build Strategy](#3-docker-build-strategy)
 4. [Dev Containers](#4-dev-containers)
 5. [CI/CD Pipeline Architecture](#5-cicd-pipeline-architecture)
-6. [Kubernetes Deployment Model](#6-kubernetes-deployment-model)
-7. [Helm Chart Strategy](#7-helm-chart-strategy)
-8. [Environment Strategy](#8-environment-strategy)
-9. [Environment Promotion](#9-environment-promotion)
-10. [Blue/Green Deployment](#10-bluegreen-deployment)
-11. [Canary Deployment](#11-canary-deployment)
-12. [Rolling Updates](#12-rolling-updates)
-13. [Rollback Strategy](#13-rollback-strategy)
-14. [Secrets Management Operations](#14-secrets-management-operations)
-15. [Configuration Management](#15-configuration-management)
-16. [Database Migration Operations](#16-database-migration-operations)
-17. [Multi-Region Deployment](#17-multi-region-deployment)
-18. [Disaster Recovery Procedures](#18-disaster-recovery-procedures)
-19. [High Availability Operations](#19-high-availability-operations)
-20. [GPU Deployment and Scheduling](#20-gpu-deployment-and-scheduling)
-21. [AMD ROCm Deployment Procedures](#21-amd-rocm-deployment-procedures)
-22. [NVIDIA Deployment](#22-nvidia-deployment)
-23. [Enterprise On-Prem Deployment](#23-enterprise-on-prem-deployment)
-24. [Monitoring Integration](#24-monitoring-integration)
-25. [Cost Optimization](#25-cost-optimization)
-26. [Deployment Runbooks](#26-deployment-runbooks)
-27. [Compliance and Auditing](#27-compliance-and-auditing)
+6. [Environment Strategy](#6-environment-strategy)
+7. [Environment Promotion](#7-environment-promotion)
+8. [Blue/Green Deployment](#8-bluegreen-deployment)
+9. [Canary Deployment](#9-canary-deployment)
+10. [Rolling Updates](#10-rolling-updates)
+11. [Rollback Strategy](#11-rollback-strategy)
+12. [Secrets Management Operations](#12-secrets-management-operations)
+13. [Configuration Management](#13-configuration-management)
+14. [Database Migration Operations](#14-database-migration-operations)
+15. [Multi-Region Deployment](#15-multi-region-deployment)
+16. [Disaster Recovery Procedures](#16-disaster-recovery-procedures)
+17. [High Availability Operations](#17-high-availability-operations)
+18. [GPU Deployment and Scheduling](#18-gpu-deployment-and-scheduling)
+19. [AMD ROCm Deployment Procedures](#19-amd-rocm-deployment-procedures)
+20. [NVIDIA Deployment](#20-nvidia-deployment)
+21. [Enterprise On-Prem Deployment](#21-enterprise-on-prem-deployment)
+22. [Monitoring Integration](#22-monitoring-integration)
+23. [Cost Optimization](#23-cost-optimization)
+24. [Deployment Runbooks](#24-deployment-runbooks)
+25. [Compliance and Auditing](#25-compliance-and-auditing)
 
 ---
 
@@ -79,17 +77,16 @@
 | Dev Container | 2 min (first: 5 min) | Medium | Full-stack development |
 | Docker Compose | 1 min (first: 3 min) | High | Service integration testing |
 | Local install | 5 min | Low | Quick backend changes |
-| Tilt (K8s in dev) | 10 min | Very High | K8s-native development |
+| Tilt (K8s in dev) | Removed during cleanup | | |
 
 ### 2.2 Dev Container
 
 ```json
 {
-  "name": "OpenQuery Development",
+  "name": "SchemaIntern Development",
   "image": "mcr.microsoft.com/devcontainers/python:3.12",
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
-    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {},
     "ghcr.io/devcontainers/features/node:1": { "version": "22" }
   },
   "forwardPorts": [3000, 8100, 8200, 8300, 8400, 8500, 8600],
@@ -131,23 +128,14 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-  qdrant:
-    image: qdrant/qdrant:v1.12
-    ports: ["6333:6333", "6334:6334"]
-    volumes: [qdrant_data:/qdrant/storage]
-  redis:
-    image: redis:7-alpine
-    ports: ["6379:6379"]
   ke-api:
     build:
       context: ../../
       dockerfile: infra/docker/Dockerfile.ke-api
     ports: ["8200:8200"]
-    depends_on: [postgres, qdrant]
+    depends_on: [postgres]
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:dev_password@postgres:5432/opencode_dev
-      QDRANT_URL: http://qdrant:6333
-      REDIS_URL: redis://redis:6379
       LOG_LEVEL: DEBUG
   frontend:
     build:
@@ -162,7 +150,6 @@ services:
 
 volumes:
   pgdata:
-  qdrant_data:
 ```
 
 ---
@@ -254,11 +241,11 @@ Image tagging convention: `{registry}/{service}:{git-sha}` (immutable primary), 
 
 | Configuration | Purpose | Services Included |
 |--------------|---------|------------------|
-| `backend` | Backend API development | postgres, qdrant, redis, ke-api |
-| `frontend` | Frontend development | postgres, qdrant, redis, ke-api, public-api |
+| `backend` | Backend API development | postgres, ke-api |
+| `frontend` | Frontend development | postgres, ke-api, public-api |
 | `fullstack` | Full-stack development | All services (no GPU) |
 | `pipeline` | Agent pipeline development | All services + mock inference |
-| `infra` | Infrastructure development | Minikube, Terraform, Helm |
+| `infra` | Removed during cleanup | |
 
 For GPU development, a GPU-enabled dev container is available at `.devcontainer/devcontainer-gpu.json` with `--gpus all` and `--shm-size 8g`.
 
@@ -297,90 +284,7 @@ Lint & Type → Unit Tests → Build Images → Push to ECR → Scan (Trivy)
 
 ---
 
-## 6. Kubernetes Deployment Model
-
-### 6.1 Workload Types
-
-| Workload | Kind | Replicas | Update Strategy |
-|----------|------|----------|-----------------|
-| ke-api | Deployment | 3-10 | RollingUpdate (maxUnavailable: 1, maxSurge: 1) |
-| public-api | Deployment | 3-20 | RollingUpdate (maxUnavailable: 1, maxSurge: 2) |
-| model-router | Deployment | 2-4 | RollingUpdate (maxUnavailable: 1, maxSurge: 1) |
-| query-pipeline-gpu | Deployment | 2-10 | RollingUpdate (maxUnavailable: 0, maxSurge: 1) |
-| frontend | Deployment | 2-10 | RollingUpdate (maxUnavailable: 1, maxSurge: 2) |
-| postgres | StatefulSet | 1-3 | RollingUpdate (partitioned) |
-| qdrant | StatefulSet | 3-5 | RollingUpdate (partitioned) |
-
-### 6.2 Standard Deployment Template
-
-All deployments include: liveness probe, readiness probe, startup probe, pod anti-affinity (spread across zones), PDB (minAvailable >= 2 for critical services), Linkerd sidecar injection, Prometheus metrics scraping annotation, grace period (30-120s depending on service).
-
-### 6.3 Pod Disruption Budgets
-
-| Service | minAvailable | Rationale |
-|---------|-------------|-----------|
-| ke-api | 2 | Always need serving capacity |
-| public-api | 2 | API availability critical |
-| model-router | 1 | Low traffic, fast scale-up |
-| query-pipeline-gpu | 1 | GPU pods expensive |
-| frontend | 1 | Static files handle reduced replicas |
-
----
-
-## 7. Helm Chart Strategy
-
-### 7.1 Chart Structure
-
-```
-infra/charts/opencode/
-├── Chart.yaml
-├── values.yaml                 # Default values
-├── values/
-│   ├── dev.yaml                # Dev overrides
-│   ├── staging.yaml            # Staging overrides
-│   ├── prod.yaml               # Production overrides
-│   ├── prod-enterprise.yaml    # Enterprise overrides
-│   └── air-gapped.yaml         # Air-gapped overrides
-├── templates/
-│   ├── _helpers.tpl
-│   ├── deployment.yaml         # Deployment template
-│   ├── service.yaml            # Service template
-│   ├── configmap.yaml          # ConfigMap template
-│   ├── externalsecret.yaml     # ExternalSecret template
-│   ├── hpa.yaml                # HPA template
-│   ├── pdb.yaml                # PDB template
-│   ├── servicemonitor.yaml     # Prometheus ServiceMonitor
-│   ├── networkpolicy.yaml      # NetworkPolicy
-│   └── job-migrate.yaml        # DB migration job
-└── charts/                     # Vendored dependencies
-```
-
-### 7.2 Values Layering
-
-```
-Layer 0: Code defaults → Layer 1: values.yaml → Layer 2: Environment values
-→ Layer 3: ConfigMap (dynamic) → Layer 4: Env vars (sensitive) → Layer 5: Feature flags (runtime)
-```
-
-### 7.3 Helm Release Strategy
-
-| Environment | Release Name | Install Method |
-|-------------|-------------|----------------|
-| dev | opencode-dev | helm upgrade --install |
-| staging | opencode-staging | ArgoCD (auto-sync) |
-| production | opencode-prod | ArgoCD (manual sync) |
-| enterprise | opencode-{tenant} | ArgoCD (per tenant) |
-| on-prem | opencode | Air-gapped install script |
-
-### 7.4 Helm Lifecycle Hooks
-
-- **Pre-install/upgrade**: DB migration job (alembic upgrade head)
-- **Post-install**: Smoke test validation
-- **Pre-rollback**: Health check on current release
-
----
-
-## 8. Environment Strategy
+## 6. Environment Strategy
 
 ### 8.1 Environment Specifications
 
@@ -403,7 +307,7 @@ Layer 0: Code defaults → Layer 1: values.yaml → Layer 2: Environment values
 
 ---
 
-## 9. Environment Promotion
+## 7. Environment Promotion
 
 ### 9.1 Promotion Policy
 
@@ -442,7 +346,7 @@ Post-Deployment:
 
 ---
 
-## 10. Blue/Green Deployment
+## 8. Blue/Green Deployment
 
 ### 10.1 Strategy
 
@@ -459,20 +363,13 @@ Maintain two parallel stacks (Blue = current, Green = new). Traffic switches ato
 
 ```bash
 # 1. Deploy Green (inactive) with new image
-helm upgrade --install opencode-prod infra/charts/opencode \
-  --namespace opencode-prod \
-  -f infra/charts/opencode/values/prod.yaml \
-  --set images.tag=${IMAGE_TAG} \
-  --set rollout.blueGreen.active=false \
-  --wait --timeout 5m
+docker compose -f docker-compose.yml up -d green
 
 # 2. Run smoke tests against Green
 python infra/scripts/smoke-test.py --url ${GREEN_URL}
 
 # 3. Switch traffic to Green (atomic)
-helm upgrade opencode-prod infra/charts/opencode \
-  --namespace opencode-prod \
-  --set rollout.blueGreen.active=true
+docker compose -f docker-compose.yml up -d
 
 # 4. Monitor for regression (5 min)
 sleep 300
@@ -483,7 +380,7 @@ python infra/scripts/check-metrics.py --env prod
 
 ---
 
-## 11. Canary Deployment
+## 9. Canary Deployment
 
 ### 11.1 Strategy
 
@@ -513,7 +410,7 @@ Canary uses Linkerd TrafficSplit for weight-based routing. The canary deployment
 
 ---
 
-## 12. Rolling Updates
+## 10. Rolling Updates
 
 ### 12.1 Default Strategy
 
@@ -541,14 +438,13 @@ All rollouts have `progressDeadlineSeconds: 600` (10 min max). If pods don't bec
 
 ---
 
-## 13. Rollback Strategy
+## 11. Rollback Strategy
 
 ### 13.1 Rollback Methods
 
 | Method | Speed | Risk | When to Use |
 |--------|-------|------|-------------|
-| helm rollback | 2-5 min | Low | Failed deployment (most common) |
-| ArgoCD rollback | 1-3 min | Low | GitOps-managed environments |
+| Docker Compose restart | 1-2 min | Low | Failed deployment (most common) |
 | Git revert | 5-10 min | Medium | Configuration errors |
 | Database restore | 30-60 min | High | Data corruption, bad migration |
 
@@ -568,7 +464,7 @@ Database rollbacks follow expand-contract pattern: prefer writing a new migratio
 
 ---
 
-## 14. Secrets Management Operations
+## 12. Secrets Management Operations
 
 ### 14.1 Architecture
 
@@ -593,7 +489,7 @@ For air-gapped deployments, secrets are pre-generated, encrypted with age/sops, 
 
 ---
 
-## 15. Configuration Management
+## 13. Configuration Management
 
 ### 15.1 Configuration Layers
 
@@ -619,7 +515,7 @@ Flag lifecycle: Dev (all togglable) → Staging (staging defaults) → Prod (dep
 
 ---
 
-## 16. Database Migration Operations
+## 14. Database Migration Operations
 
 ### 16.1 Principles
 
@@ -669,7 +565,7 @@ def test_migration_idempotent():
 
 ---
 
-## 17. Multi-Region Deployment
+## 15. Multi-Region Deployment
 
 ### 17.1 Architecture
 
@@ -697,7 +593,7 @@ Enterprise-tier feature (Year 2 target). Active-passive with warm standby.
 
 ---
 
-## 18. Disaster Recovery Procedures
+## 16. Disaster Recovery Procedures
 
 ### 18.1 DR Tiers
 
@@ -715,7 +611,7 @@ Enterprise-tier feature (Year 2 target). Active-passive with warm standby.
 
 **Data Corruption**: STOP ALL QUERIES → identify last clean backup → restore PG from snapshot → verify integrity → re-point application → re-apply legitimate changes.
 
-**GPU Node Failure**: K8s reschedules GPU pods to healthy nodes. If all GPU nodes fail, router falls back to cloud inference (GPT-4o).
+**GPU Node Failure**: Router falls back to cloud inference (GPT-4o). K8s pod scheduling was removed during cleanup.
 
 ### 18.3 DR Testing Schedule
 
@@ -729,7 +625,7 @@ Enterprise-tier feature (Year 2 target). Active-passive with warm standby.
 
 ---
 
-## 19. High Availability Operations
+## 17. High Availability Operations
 
 ### 19.1 Availability Targets
 
@@ -752,7 +648,7 @@ Multi-AZ deployment costs approximately 2x single-AZ (GPU nodes: $4K → $8K/mo,
 
 ---
 
-## 20. GPU Deployment and Scheduling
+## 18. GPU Deployment and Scheduling
 
 ### 20.1 Node Pool Architecture
 
@@ -781,7 +677,7 @@ Karpenter provisioner for GPU nodes with consolidation (replace when empty, 5 mi
 
 ---
 
-## 21. AMD ROCm Deployment Procedures
+## 19. AMD ROCm Deployment Procedures
 
 ### 21.1 GPU Node Bootstrap
 
@@ -804,7 +700,7 @@ Models are deployed via Helm chart with model-specific values (GPU memory, pods 
 
 ---
 
-## 22. NVIDIA Deployment
+## 20. NVIDIA Deployment
 
 ### 22.1 Multi-Phase Plan
 
@@ -824,26 +720,26 @@ Models are deployed via Helm chart with model-specific values (GPU memory, pods 
 
 ---
 
-## 23. Enterprise On-Prem Deployment
+## 21. Enterprise On-Prem Deployment
 
 ### 23.1 Deployment Modes
 
 | Mode | Network | Bundle Size | Upgrade Method |
 |------|---------|-------------|----------------|
-| Connected on-prem | Internal network | < 1GB | helm upgrade |
+| Connected on-prem | Internal network | < 1GB | Docker Compose upgrade |
 | Air-gapped | No network egress | 15-30GB | Pull + scripted upgrade |
 | Customer VPC | Customer cloud | < 1MB (config) | CI/CD per customer |
 
 ### 23.2 Air-Gapped Bundle
 
 ```
-openquery-airgapped-v1.0.0/
+schemaintern-airgapped-v1.0.0/
 ├── checksums.sha256
 ├── manifest.yaml
 ├── images/                    # All container images (docker save)
 ├── charts/                    # Helm charts with vendored deps
 ├── scripts/
-│   ├── preflight-check.sh     # Verify K8s version, GPU, storage
+│   ├── preflight-check.sh     # Verify GPU, storage
 │   ├── load-images.sh         # Load all images
 │   ├── install.sh             # Full installation
 │   ├── upgrade.sh             # Version upgrade
@@ -873,7 +769,7 @@ Pull-based: customer retrieves release bundle, runs `./scripts/upgrade.sh v1.1.0
 
 ---
 
-## 24. Monitoring Integration
+## 22. Monitoring Integration
 
 ### 24.1 Stack
 
@@ -898,7 +794,7 @@ Pull-based: customer retrieves release bundle, runs `./scripts/upgrade.sh v1.1.0
 
 ---
 
-## 25. Cost Optimization
+## 23. Cost Optimization
 
 ### 25.1 Deployment-Level Levers
 
@@ -920,7 +816,7 @@ Pull-based: customer retrieves release bundle, runs `./scripts/upgrade.sh v1.1.0
 
 ---
 
-## 26. Deployment Runbooks
+## 24. Deployment Runbooks
 
 ### 26.1 Standard Deployment Runbook
 
@@ -953,7 +849,7 @@ Check canary health metrics.
 
 ---
 
-## 27. Compliance and Auditing
+## 25. Compliance and Auditing
 
 ### 27.1 Deployment Audit Trail
 
@@ -996,7 +892,7 @@ Every deployment logs to the audit system:
 
 | Source | Relevance |
 |--------|-----------|
-| [Infrastructure-Specification.md](Infrastructure-Specification.md) | Infrastructure architecture, Docker, K8s, Terraform |
+| [Infrastructure-Specification.md](Infrastructure-Specification.md) | Infrastructure architecture, Docker |
 | [Engineering-Standards.md](Engineering-Standards.md) §7-8 | CI/CD standards, git workflow, release strategy |
 | [Security-Specification.md](Security-Specification.md) §9 | Secrets management, deployment security checklist |
 | [Database-Specification.md](Database-Specification.md) §11 | Backup/recovery, migration procedures |

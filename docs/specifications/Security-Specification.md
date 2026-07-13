@@ -289,20 +289,20 @@ Validate output:
 
 ```
 -- Target database read-only user
-CREATE USER openquery_reader WITH PASSWORD '[random]';
-GRANT CONNECT ON DATABASE target_db TO openquery_reader;
-GRANT USAGE ON SCHEMA public TO openquery_reader;
+CREATE USER schemaintern_reader WITH PASSWORD '[random]';
+GRANT CONNECT ON DATABASE target_db TO schemaintern_reader;
+GRANT USAGE ON SCHEMA public TO schemaintern_reader;
 
 -- Grant SELECT only on authorized tables (per-tenant)
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO openquery_reader;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO schemaintern_reader;
 
 -- Revoke all dangerous functions
-REVOKE ALL ON FUNCTION pg_sleep FROM openquery_reader;
-REVOKE ALL ON FUNCTION pg_read_file FROM openquery_reader;
-REVOKE ALL ON FUNCTION pg_read_binary_file FROM openquery_reader;
+REVOKE ALL ON FUNCTION pg_sleep FROM schemaintern_reader;
+REVOKE ALL ON FUNCTION pg_read_file FROM schemaintern_reader;
+REVOKE ALL ON FUNCTION pg_read_binary_file FROM schemaintern_reader;
 
 -- Set statement timeout (30 seconds)
-ALTER ROLE openquery_reader SET statement_timeout = '30s';
+ALTER ROLE schemaintern_reader SET statement_timeout = '30s';
 ```
 
 ### 4.4 Parameterized Query Execution
@@ -488,7 +488,7 @@ class ABACEngine:
 
 ### 6.5 ABAC Cache
 
-ABAC policies are cached in Redis with 5-minute TTL. Policy changes propagate via WebSocket event to invalidate cache.
+ABAC policies are cached in-memory with 5-minute TTL. Redis was removed during cleanup — rate limiting uses in-memory counters.
 
 ---
 
@@ -502,7 +502,7 @@ ABAC policies are cached in Redis with 5-minute TTL. Policy changes propagate vi
 | PostgreSQL (RDS) | RDS encryption | AWS KMS (customer-managed) | AES-256 |
 | PostgreSQL (on-prem) | LUKS + PG data encryption | Vault Transit | AES-256-GCM |
 | Qdrant | Disk encryption + payload encryption | K8s Secret -> env var | AES-256-GCM |
-| Redis | AUTH + TLS (no at-rest encryption needed) | N/A | N/A |
+| Redis | Removed during cleanup — Redis not in use | N/A | N/A |
 | S3 (backups) | Server-side encryption (SSE-S3) | AWS KMS | AES-256 |
 | S3 (audit logs) | Server-side encryption (SSE-KMS) | AWS KMS | AES-256 |
 | EBS volumes | EBS encryption (default) | AWS KMS | AES-256 |
@@ -516,7 +516,7 @@ ABAC policies are cached in Redis with 5-minute TTL. Policy changes propagate vi
 | API -> KE API (internal) | mTLS (Linkerd) | TLS_AES_256_GCM_SHA384 | Linkerd identity (24h) |
 | API -> PostgreSQL | TLS 1.3 | TLS_AES_256_GCM_SHA384 | RDS CA bundle |
 | API -> Qdrant | TLS 1.3 | TLS_AES_256_GCM_SHA384 | Self-signed (internal CA) |
-| API -> Redis | TLS 1.2 | TLS_AES_256_GCM_SHA384 | Self-signed (internal CA) |
+| API -> Redis | Removed during cleanup — Redis not in use | | |
 | Service -> Vault | TLS 1.3 | TLS_AES_256_GCM_SHA384 | Vault CA |
 | Pod -> Pod (mesh) | mTLS (Linkerd) | TLS_AES_256_GCM_SHA384 | Linkerd identity |
 
@@ -674,7 +674,7 @@ vault read transit/keys/jwt-signing
 | Application | Single process (tenant-aware) | Single process | Separate pods | Separate pods |
 | Database | RLS (row-level security) | Separate RDS instance | Customer RDS | Customer PG |
 | Vector DB | Per-tenant collection | Per-tenant cluster | Customer Qdrant | Customer Qdrant |
-| Cache | Key prefixed with tenant_id | Separate Redis | Customer Redis | Customer Redis |
+| Cache | In-memory (per-process) | In-memory (per-process) | In-memory (per-process) | In-memory (per-process) |
 | Storage | S3 prefix per tenant | S3 prefix per tenant | Customer S3 | Local storage |
 | Audit | tenant_id field | tenant_id field | tenant_id field | tenant_id field |
 
@@ -728,15 +728,7 @@ client.search(
 
 ### 10.4 Cache Isolation
 
-```python
-# Redis key prefixing
-def tenant_key(tenant_id: str, key: str) -> str:
-    return f"tnt:{tenant_id}:{key}"
-
-# Usage
-await redis.set(tenant_key(tenant_id, "schema:users"), schema_data)
-await redis.get(tenant_key(tenant_id, "schema:users"))
-```
+Redis was removed — cache isolation uses in-memory tenant-prefixed keys.
 
 ### 10.5 Cross-Tenant Attack Prevention
 
@@ -1347,11 +1339,11 @@ class AuditChain:
 
 ```
 # VDP (security.txt)
-Canonical: https://openquery.io/.well-known/security.txt
-Contact: https://hackerone.com/openquery
-Encryption: https://openquery.io/pgp-key.txt
-Policy: https://openquery.io/security-policy
-Hiring: https://openquery.io/careers
+Canonical: https://schemaintern.io/.well-known/security.txt
+Contact: https://hackerone.com/schemaintern
+Encryption: https://schemaintern.io/pgp-key.txt
+Policy: https://schemaintern.io/security-policy
+Hiring: https://schemaintern.io/careers
 ```
 
 ---
@@ -1464,12 +1456,12 @@ Annually:
 
 | Role | Name/Team | Contact | Escalation |
 |------|-----------|---------|------------|
-| CISO | Security team lead | ciso@openquery.io | CEO |
-| Security engineer | On-call rotation | security@openquery.io | CISO |
-| Incident response | On-call SRE | incident@openquery.io | VP Eng |
-| Bug bounty | HackerOne | h1-openquery@openquery.io | Security team |
-| Compliance | Legal team | compliance@openquery.io | CISO |
-| Privacy | Data protection officer | dpo@openquery.io | CEO |
+| CISO | Security team lead | ciso@schemaintern.io | CEO |
+| Security engineer | On-call rotation | security@schemaintern.io | CISO |
+| Incident response | On-call SRE | incident@schemaintern.io | VP Eng |
+| Bug bounty | HackerOne | h1-schemaintern@schemaintern.io | Security team |
+| Compliance | Legal team | compliance@schemaintern.io | CISO |
+| Privacy | Data protection officer | dpo@schemaintern.io | CEO |
 
 ---
 

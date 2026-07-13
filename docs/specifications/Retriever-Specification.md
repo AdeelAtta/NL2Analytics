@@ -193,13 +193,7 @@ RetrievedContext {
 
 ### 3.1 Embedding Collections
 
-The Retriever queries three per-tenant Qdrant collections populated by the Schema Intelligence pipeline:
-
-| Collection | Vector Dimension | Distance | Content | Filters |
-|------------|-----------------|----------|---------|---------|
-| `{tenant}_schema_columns` | 1024-d dense + sparse | Cosine | Column name + description + type embeddings | `table_name`, `semantic_type`, `data_type` |
-| `{tenant}_schema_tables` | 1024-d dense + sparse | Cosine | Table name + entity type + description embeddings | `entity_type`, `schema_name` |
-| `{tenant}_query_patterns` | 1024-d dense | Cosine | Historical query embeddings for pattern matching | `complexity`, `tables_used` |
+_Qdrant was removed during cleanup — vector search falls back to PostgreSQL pgvector for embedding storage and retrieval._
 
 ### 3.2 Search Configuration
 
@@ -889,8 +883,8 @@ Algorithm:
 | Layer | Technology | TTL | Content | Invalidation |
 |-------|------------|-----|---------|-------------|
 | L1: In-memory (local) | Dict (per pod) | 60s | Recent retrieval results (top-100) | TTL expiry, schema change event |
-| L2: Distributed (Redis) | Redis Cluster | 300s | Frequent retrieval results | TTL expiry, schema change event |
-| L3: Embedding cache | Redis Cluster | 3600s | Computed query embeddings | TTL expiry |
+| L2: Distributed (PostgreSQL) | PostgreSQL | 300s | Frequent retrieval results | TTL expiry, schema change event |
+| L3: Embedding cache | PostgreSQL | 3600s | Computed query embeddings | TTL expiry |
 | L4: Result cache | PostgreSQL | 600s | Frequently requested schemas | Schema version change |
 
 ### 14.2 Cache Keys
@@ -914,9 +908,9 @@ CACHE_KEY_TEMPLATES = {
 | Cache Layer | Target Hit Ratio | Latency Saved | Impact |
 |-------------|-----------------|---------------|--------|
 | L1: In-memory | 20% | ~50ms | Fastest queries |
-| L2: Redis (retrieval) | 30% | ~40ms | Common queries |
-| L3: Redis (embedding) | 50% | ~5ms | Query embedding hits |
-| L4: PostgreSQL | 15% | ~100ms | Schema-heavy queries |
+| L2: PostgreSQL | 30% | ~40ms | Common queries |
+| L3: PostgreSQL (embedding) | 50% | ~5ms | Query embedding hits |
+| L4: PostgreSQL (schema) | 15% | ~100ms | Schema-heavy queries |
 | **Composite** | **~60%** | **~50ms avg** | Overall user experience |
 
 ### 14.4 Cache Warmup
@@ -966,45 +960,7 @@ Warmup frequency: On pod deploy, on schema change for top-10 tables
 
 ### 15.3 Health Checks
 
-```python
-# Pseudocode: health check endpoints
-RETRIEVER_HEALTH_CHECKS = {
-    "qdrant": {
-        "check": "ping qdrant:6333",
-        "timeout": "2s",
-        "degraded_if": "no response",
-        "critical": False,  # Degraded mode available
-    },
-    "postgres": {
-        "check": "SELECT 1 FROM ke_schema",
-        "timeout": "2s",
-        "degraded_if": "no response",
-        "critical": False,
-    },
-    "embedder": {
-        "check": "embed 'health check'",
-        "timeout": "1s",
-        "degraded_if": "no response",
-        "critical": False,
-    },
-    "reranker": {
-        "check": "inference 'health' ['check']",
-        "timeout": "2s",
-        "degraded_if": "no response",
-        "critical": False,
-    },
-    "cache": {
-        "check": "redis ping",
-        "timeout": "1s",
-        "degraded_if": "no response",
-        "critical": False,
-    },
-}
-
-# If 3+ checks fail -> CRITICAL (retrieval unavailable)
-# If 1-2 checks fail -> DEGRADED (fallback modes active)
-# If 0 checks fail -> HEALTHY
-```
+_Redis and Qdrant health checks were removed during cleanup — PostgreSQL serves as the primary data store._
 
 ---
 

@@ -4,14 +4,14 @@ services:
     image: postgres:16-alpine
     ports: ["5432:5432"]
     environment:
-      POSTGRES_DB: openquery
-      POSTGRES_USER: openquery
-      POSTGRES_PASSWORD: openquery_dev
+      POSTGRES_DB: schemaintern
+      POSTGRES_USER: schemaintern
+      POSTGRES_PASSWORD: schemaintern_dev
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./postgres-init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U openquery"]
+      test: ["CMD-SHELL", "pg_isready -U schemaintern"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -29,36 +29,15 @@ services:
       -c min_wal_size=1GB
       -c max_wal_size=4GB
 
-  redis:
-    image: redis:7-alpine
-    ports: ["6379:6379"]
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
-
-  qdrant:
-    image: qdrant/qdrant:v1.12
-    ports:
-      - "6333:6333"  # REST
-      - "6334:6334"  # gRPC
-    volumes:
-      - qdrant_data:/qdrant/storage
-    environment:
-      QDRANT__SERVICE__GRPC_PORT: 6334
-      QDRANT__SERVICE__HTTP_PORT: 6333
-
   pgbouncer:
     image: edoburu/pgbouncer:1.22
     ports: ["6432:6432"]
     environment:
-      DB_USER: openquery
-      DB_PASSWORD: openquery_dev
+      DB_USER: schemaintern
+      DB_PASSWORD: schemaintern_dev
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: openquery
+      DB_NAME: schemaintern
       POOL_MODE: transaction
       MAX_CLIENT_CONN: 200
       DEFAULT_POOL_SIZE: 25
@@ -67,4 +46,3 @@ services:
 
 volumes:
   pgdata:
-  qdrant_data:

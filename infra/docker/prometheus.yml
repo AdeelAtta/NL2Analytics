@@ -16,11 +16,6 @@ scrape_configs:
       - targets: ["frontend:3000"]
     metrics_path: /api/v1/health/live
 
-  - job_name: "qdrant"
-    static_configs:
-      - targets: ["qdrant:6333"]
-    metrics_path: /metrics
-
   - job_name: "prometheus"
     static_configs:
       - targets: ["localhost:9090"]

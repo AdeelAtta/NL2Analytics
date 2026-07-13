@@ -1,5 +1,5 @@
 {
-  "name": "OpenQuery",
+  "name": "SchemaIntern",
   "dockerComposeFile": "../infra/docker/docker-compose.yml",
   "service": "backend",
   "workspaceFolder": "/workspace",

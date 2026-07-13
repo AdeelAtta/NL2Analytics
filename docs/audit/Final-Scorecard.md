@@ -1,6 +1,6 @@
 # Final Scorecard
 
-**Project:** OpenQuery — Enterprise Text-to-SQL SaaS Platform
+**Project:** SchemaIntern — Enterprise Text-to-SQL SaaS Platform
 **Date:** 2026-07-11
 **Auditor:** Independent Technical Due Diligence Team
 **Final Verdict:** CONDITIONAL PASS

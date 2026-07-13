@@ -1,6 +1,6 @@
 # Service Level Agreement (SLA) Definitions
 
-**Project:** OpenQuery | **Date:** 2026-07-11
+**Project:** SchemaIntern | **Date:** 2026-07-11
 
 ---
 

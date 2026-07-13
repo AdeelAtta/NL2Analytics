@@ -28,9 +28,7 @@
 10. [Metrics Store](#10-metrics-store)
 11. [Audit Store](#11-audit-store)
 12. [Job Queue Store](#12-job-queue-store)
-13. [Cache Store (Redis)](#13-cache-store-redis)
-14. [Vector Store (Qdrant)](#14-vector-store-qdrant)
-15. [Tenant Isolation Strategy](#15-tenant-isolation-strategy)
+13. [Tenant Isolation Strategy](#15-tenant-isolation-strategy)
 16. [Partitioning Strategy](#16-partitioning-strategy)
 17. [Backup & Recovery Strategy](#17-backup--recovery-strategy)
 18. [Retention Policies](#18-retention-policies)
@@ -885,7 +883,7 @@ ALTER TABLE jobs ADD CONSTRAINT ck_jobs_retry
 
 ---
 
-## 13. Cache Store (Redis)
+## 13. Cache Store
 
 ### 13.1 Instance Configuration
 
@@ -960,7 +958,7 @@ ALTER TABLE jobs ADD CONSTRAINT ck_jobs_retry
 
 ---
 
-## 14. Vector Store (Qdrant)
+## 14. Vector Store
 
 ### 14.1 Collection Structure
 
@@ -1395,8 +1393,6 @@ When a tenant is hard deleted:
 ### 22.1 Year 1 (Current)
 
 - Single PostgreSQL + PgBouncer
-- Single Qdrant cluster
-- Single Redis cluster
 - All tables in single database
 
 ### 22.2 Year 2
@@ -1405,7 +1401,6 @@ When a tenant is hard deleted:
 |--------|--------|--------|
 | Read replicas for analytics | Analytics queries impacting API latency | New connection pool for read replicas |
 | Metrics to separate time-series DB (TimescaleDB) | Metrics volume > 1B rows/month | New connection, migration from pg partitions |
-| Qdrant sharding across nodes | > 200M vectors | Add Qdrant nodes, redistribute collections |
 
 ### 22.3 Year 3
 
@@ -1413,7 +1408,7 @@ When a tenant is hard deleted:
 |--------|--------|--------|
 | History store to separate PG instance | History > 5B rows | Application-level routing |
 | Graph store migration to dedicated graph DB | Recursive CTE performance | Only if CTE traversal > 500ms P95 |
-| Redis Cluster sharding | Cache > 50GB | Native Redis Cluster mode |
+| PostgreSQL read replicas | Cache > 50GB | Application-level routing |
 | Database-per-tenant for Enterprise | Strict isolation requirement | Connection pooling per tenant, new provisioning flow |
 
 ### 22.4 Year 4+

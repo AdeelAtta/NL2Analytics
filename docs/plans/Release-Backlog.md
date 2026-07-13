@@ -17,7 +17,7 @@ Only VERIFIED BUG and DOCUMENTATION ISSUE findings are included.
 | RB-005 | S-07 | No rate limiting on any endpoint | Zero rate limiting middleware/decorator found | HIGH | Yes | API-Spec §13, Security-Spec §1.1 D-01 | — | EP-013 | TASK-108 (rate limiting planned for Public API) | M | Medium |
 | RB-006 | S-08 | Raw SQL execute endpoint lacks Pydantic model | `ke/api/routes/executor.py:21`: `body: dict[str, Any]` | HIGH | Yes | API-Spec §6, Security-Spec §4 | — | EP-011 | — | S | Low |
 | RB-007 | S-09 | Exception details leaked to clients | `app/middleware/error_handler.py:16`: `detail=str(exc)` | HIGH | Yes | Security-Spec §1.1 I-01 | — | — | — | S | Low |
-| RB-008 | S-10 | Default DB credentials in source code | `app/core/config.py:20-22`: `openquery:openquery_dev@localhost` | HIGH | Yes | Security-Spec §9.1 | ADR-012 | — | — | S | Low |
+| RB-008 | S-10 | Default DB credentials in source code | `app/core/config.py:20-22`: `schemaintern:schemaintern_dev@localhost` | HIGH | Yes | Security-Spec §9.1 | ADR-012 | — | — | S | Low |
 | RB-009 | S-07b | KE API `/docs` publicly accessible | `ke/api/main.py:26`: `/docs` excluded from ServiceAuthMiddleware | MEDIUM | Yes | Security-Spec §11.3 | ADR-004 | EP-005 | TASK-032 | S | Low |
 | RB-010 | — | MockClient sync blocking in async context | `ke/services/inference.py:127-134`: `MockClient.generate()` uses sync `re.search` but declared `async` | MEDIUM | No | — | — | — | — | S | Low |
 | RB-011 | — | JWT auth dependencies not enforced on routes | `app/auth/dependencies.py:9-19`: `auto_error=False`, defaults to anonymous | HIGH | Yes | Security-Spec §12, API-Spec §3 | — | EP-013 | TASK-106 | M | Medium |
@@ -33,9 +33,6 @@ Only VERIFIED BUG and DOCUMENTATION ISSUE findings are included.
 
 | ID | Finding | Title | Evidence | Severity | Blocking | Related Spec | Related ADR | Existing Epic | Existing Task | Effort | Risk |
 |----|---------|-------|----------|----------|----------|-------------|-------------|---------------|---------------|--------|------|
-| RB-014 | — | Helm chart is minimal template | `infra/helm/` — basic skeleton only | MEDIUM | No | Deployment-Spec | — | EP-015 | TASK-131 | L | Medium |
-| RB-015 | — | K8s manifests lack probes, PDBs, network policies | `infra/k8s/` — minimal manifests | MEDIUM | No | Deployment-Spec | — | EP-015 | TASK-130 | L | Medium |
-| RB-016 | — | Terraform is skeleton | `infra/terraform/` — basic stubs | MEDIUM | No | Deployment-Spec | — | EP-015 | TASK-132 | L | Medium |
 | RB-017 | — | No container registry configured | CI builds images but no push destination | MEDIUM | No | Deployment-Spec | — | EP-016 | TASK-140 | M | Medium |
 | RB-018 | — | No deployment automation (CD) | No CD pipeline or deployment scripts | MEDIUM | No | Deployment-Spec | — | EP-016 | TASK-139 | L | High |
 

@@ -26,7 +26,7 @@ Initialize the monorepo with workspace structure for Python backend and Node.js 
 1. Create root directory structure:
    - `/backend/`, `/backend/ke/`, `/backend/schema-intelligence/`, `/backend/query-pipeline/`, `/backend/api/`, `/backend/learning/`, `/backend/shared/`
    - `/frontend/`
-   - `/infra/docker/`, `/infra/k8s/`, `/infra/terraform/`, `/infra/helm/`
+    - `/infra/docker/`, `/infra/scripts/`
    - `/scripts/`
    - `/.github/workflows/`, `/.github/actions/`
    - `/research/`

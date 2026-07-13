@@ -1792,7 +1792,7 @@ setInterval(() => {
 |                    |    Logo        |                      |
 |                    +----------------+                      |
 |                                                           |
-|                    Sign in to OpenQuery                    |
+|                    Sign in to SchemaIntern                    |
 |                                                           |
 |                    +------------------+                    |
 |                    | Email            |                    |

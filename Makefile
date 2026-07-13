@@ -8,7 +8,7 @@ install: ## Install all dependencies
 	cd frontend && npm install
 
 dev: ## Start development environment
-	docker compose -f infra/docker/docker-compose.yml up -d postgres redis qdrant
+	docker compose -f infra/docker/docker-compose.yml up -d postgres
 	cd backend && uv run uvicorn app.main:create_app --reload --port 8100 &
 	cd frontend && npm run dev
 
@@ -69,3 +69,18 @@ pre-commit: ## Run pre-commit hooks on all files
 	pre-commit run --all-files
 
 setup: install pre-commit db-migrate db-seed ## Full setup (install + migrate + seed)
+
+prod: ## Start production stack
+	docker compose up -d --build
+
+prod-logs: ## Tail production logs
+	docker compose logs -f
+
+prod-down: ## Stop production stack
+	docker compose down
+
+dev-up: ## Start dev stack
+	docker compose -f docker-compose.dev.yml up -d --build
+
+dev-down: ## Stop dev stack
+	docker compose -f docker-compose.dev.yml down

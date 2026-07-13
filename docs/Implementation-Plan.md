@@ -96,7 +96,7 @@ This document is the master blueprint for implementing the Enterprise Data Intel
 
 | Agent | Owns Epics | Workspace |
 |-------|-----------|-----------|
-| **Infrastructure Agent** | EP-001, EP-015, EP-016 | `/infra/`, `/k8s/`, `/terraform/`, `.github/` |
+| **Infrastructure Agent** | EP-001, EP-015, EP-016 | `/infra/`, `.github/` |
 | **Knowledge Engine Agent** | EP-002, EP-003, EP-004, EP-005, EP-012 | `/backend/ke/` |
 | **Schema Intelligence Agent** | EP-006 | `/backend/schema-intelligence/` |
 | **Query Pipeline Agent** | EP-007, EP-008, EP-009, EP-010, EP-011 | `/backend/query-pipeline/` |
@@ -166,7 +166,7 @@ Every task file uses this status convention:
 | `/backend/query-pipeline/` | Intent, retrieval, planning, SQL gen, policy enforcement, execution | KE stores, public API |
 | `/backend/api/` | Public REST API, auth middleware, rate limiting | Internal pipeline logic |
 | `/frontend/` | React UI, state management, user flows | Backend services, APIs |
-| `/infra/` | Docker, K8s, Terraform, CI/CD | Application code |
+| `/infra/` | Docker, CI/CD | Application code |
 | `/research/` | Experiments, benchmarks, evaluations | Production code |
 
 ### Shared Interfaces
@@ -194,7 +194,7 @@ Every task file uses this status convention:
       /api/                     ← KE API service
       /stores/                  ← Store implementations
         /schema/                ← Schema store
-        /vector/                ← Vector index (Qdrant client)
+        /vector/                ← Vector index (Qdrant removed)
         /graph/                 ← Knowledge graph
         /history/               ← Query history store
         /feedback/              ← Feedback store
@@ -258,13 +258,7 @@ Every task file uses this status convention:
   
   /infra/
     /docker/                    ← Dockerfiles
-    /k8s/                       ← Kubernetes manifests
-      /base/                    ← Base overlays
-      /overlays/                ← Environment overlays (dev/staging/prod)
-    /terraform/                 ← Terraform modules
-      /modules/                 ← Reusable modules
-      /environments/            ← Environment configurations
-    /helm/                      ← Helm charts
+    /docker/                    ← Dockerfiles (K8s, Terraform, Helm removed)
     
   /scripts/                     ← Utility scripts
   /.github/
@@ -296,15 +290,13 @@ Every task file uses this status convention:
 | Agent orchestration | LangGraph | latest | `backend/query-pipeline/` |
 | ORM | SQLAlchemy | 2.0+ | `backend/ke/stores/` |
 | DB driver (PG) | asyncpg | 0.30+ | `backend/ke/stores/` |
-| Vector store client | Qdrant client | 1.12+ | `backend/ke/stores/vector/` |
-| LLM inference | vLLM + SGLang | latest | `infra/k8s/gpu/` |
+| Vector store client | Qdrant client (removed) | 1.12+ | `backend/ke/stores/vector/` |
+| LLM inference | vLLM + SGLang | latest | — |
 | Embeddings | BGE-M3 (sentence-transformers) | latest | `backend/schema-intelligence/embedders/` |
 | SQL parser | sqlglot | latest | `backend/query-pipeline/policy/` |
 | Frontend | React 19 + Next.js 15 | latest | `frontend/` |
 | UI kit | shadcn/ui + Tailwind CSS | latest | `frontend/` |
 | Docker | Docker | 27+ | `infra/docker/` |
-| K8s | Kubernetes | 1.30+ | `infra/k8s/` |
-| IaC | Terraform | 1.9+ | `infra/terraform/` |
 | CI/CD | GitHub Actions | — | `.github/workflows/` |
 
 ---
@@ -343,7 +335,7 @@ Every task file uses this status convention:
 |------|---------|-------------|
 | `/docs/epics/EP-001-Dev-Environment.md` | Epic: Dev environment, monorepo, tooling setup | Infrastructure |
 | `/docs/epics/EP-002-Schema-Store.md` | Epic: PostgreSQL schema store implementation | Knowledge Engine |
-| `/docs/epics/EP-003-Vector-Index.md` | Epic: Qdrant vector index implementation | Knowledge Engine |
+| `/docs/epics/EP-003-Vector-Index.md` | Epic: Qdrant vector index implementation (Qdrant removed) | Knowledge Engine |
 | `/docs/epics/EP-004-Knowledge-Graph.md` | Epic: Business ontology and graph layer | Knowledge Engine |
 | `/docs/epics/EP-005-KE-API.md` | Epic: Knowledge Engine API service | Knowledge Engine |
 | `/docs/epics/EP-006-Schema-Intelligence.md` | Epic: Schema discovery, description, embedding | Schema Intelligence |

@@ -13,7 +13,7 @@
 
 1. Implement all 9 knowledge stores (Schema, Vector, Graph, History, Feedback, Config, Metrics, Audit, Cache)
 2. Implement the Knowledge Engine API (port 8200, internal)
-3. Implement Qdrant vector index with BGE-M3 embeddings
+3. Implement vector index with BGE-M3 embeddings (Qdrant removed)
 4. Implement PostgreSQL graph store with recursive CTEs
 5. Implement the Learning Loop (feedback collection, validation, enrichment)
 6. Create Alembic migrations for all PostgreSQL stores
@@ -40,7 +40,7 @@
     dependencies.py
   /stores/                  -> Store implementations
     /schema/                -> Schema store (PostgreSQL)
-    /vector/                -> Vector index (Qdrant client)
+    /vector/                -> Vector index (Qdrant removed)
     /graph/                 -> Graph store (PostgreSQL CTEs)
     /history/               -> Query history store
     /feedback/              -> Feedback store
@@ -82,9 +82,8 @@ Start with EP-002 (Schema Store):
 6. Write tests
 
 Then EP-003 (Vector Index):
-1. Set up Qdrant client with connection pool
+1. Implement vector CRUD operations (Qdrant client removed)
 2. Implement BGE-M3 embedding service
-3. Implement vector CRUD operations
 
 Then EP-005 (KE API):
 1. Create FastAPI app on port 8200
@@ -96,6 +95,6 @@ Then EP-005 (KE API):
 ## Definition of Done
 - All KE stores implemented and tested (90%+ coverage)
 - KE API serves all 9 stores with correct tenant isolation
-- Integration tests pass against real PostgreSQL + Qdrant
+- Integration tests pass against real PostgreSQL (Qdrant removed)
 - Learning loop processes feedback correctly
 - All task status files updated

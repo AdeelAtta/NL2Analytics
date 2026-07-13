@@ -21,12 +21,9 @@ class Settings(BaseSettings):
     environment: str = "development"
 
     # Database
-    postgres_dsn: str = "postgresql+asyncpg://openquery:openquery_dev@localhost:5432/openquery"
-    postgres_dsn_sync: str = "postgresql://openquery:openquery_dev@localhost:5432/openquery"
-    redis_url: str = "redis://localhost:6379/0"
-    qdrant_url: str = "http://localhost:6333"
-    qdrant_grpc_port: int = 6334
-    qdrant_api_key: str = ""
+    postgres_dsn: str = "postgresql+asyncpg://schemaintern:schemaintern_dev@localhost:5432/schemaintern"
+    postgres_dsn_sync: str = "postgresql://schemaintern:schemaintern_dev@localhost:5432/schemaintern"
+
 
     # Auth
     jwt_secret: str = ""
@@ -55,9 +52,6 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_org_id: str = ""
 
-    # KE API (internal service)
-    ke_api_url: str = "http://localhost:8200"
-
     # CORS
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
@@ -69,7 +63,7 @@ def get_settings() -> Settings:
     return settings
 
 
-_DEFAULT_CREDENTIAL_WORDS = ("openquery_dev", "localhost", "change-me")
+_DEFAULT_CREDENTIAL_WORDS = ("schemaintern_dev", "localhost", "change-me")
 
 
 def _validate_settings(settings: Settings) -> None:
@@ -84,7 +78,7 @@ def _validate_settings(settings: Settings) -> None:
 
     is_prod = settings.environment == "production"
     if is_prod:
-        checks = (("POSTGRES_DSN", settings.postgres_dsn), ("REDIS_URL", settings.redis_url))
+        checks = (("POSTGRES_DSN", settings.postgres_dsn),)
         for dsn_name, dsn in checks:
             if dsn and any(w in dsn.lower() for w in _DEFAULT_CREDENTIAL_WORDS):
                 logger.warning(

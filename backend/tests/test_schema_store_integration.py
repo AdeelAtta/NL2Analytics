@@ -27,7 +27,7 @@ from ke.stores.schema.repository import (
 )
 from shared.models.pagination import PaginationParams
 
-DSN = "postgresql+asyncpg://openquery:openquery_dev@localhost:5432/openquery"
+DSN = "postgresql+asyncpg://schemaintern:schemaintern_dev@localhost:5432/schemaintern"
 
 
 @pytest_asyncio.fixture

@@ -128,7 +128,7 @@ tests/test_config.py::TestConfig::test_settings_defaults PASSED
 
 ## Blocker 6: Root-Level Tests Test Wrong Settings Class
 
-**Root Cause**: `tests/unit/test_config.py` defined a separate `TestSettings` class with `OPENQUERY__` env prefix (e.g., `database_url`, `secret_key`) that didn't match the real `Settings` class in `backend/app/core/config.py` (which has fields like `postgres_dsn`, `jwt_secret`). Six tests passed against the wrong model.
+**Root Cause**: `tests/unit/test_config.py` defined a separate `TestSettings` class with `SCHEMAINTERN__` env prefix (e.g., `database_url`, `secret_key`) that didn't match the real `Settings` class in `backend/app/core/config.py` (which has fields like `postgres_dsn`, `jwt_secret`). Six tests passed against the wrong model.
 
 **Files Modified**:
 
@@ -195,7 +195,7 @@ Additionally:
 **Verification**:
 ```
 $ npm run test
-> openquery-frontend@0.1.0 test
+> schemaintern-frontend@0.1.0 test
 > echo 'No tests configured yet'
 No tests configured yet
 ```

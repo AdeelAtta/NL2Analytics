@@ -46,12 +46,6 @@ def test_asyncpg_import() -> None:
     assert asyncpg.__version__
 
 
-def test_redis_import() -> None:
-    import redis  # noqa: F811
-
-    assert redis.__version__
-
-
 def test_python_jose_import() -> None:
     import jose  # noqa: F811
 

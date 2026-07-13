@@ -1,3 +1,5 @@
+import { useAuthStore } from "@/stores/auth";
+
 export interface SessionUser {
   id: string;
   name: string;
@@ -12,24 +14,21 @@ export interface Session {
 }
 
 export function useSession(): { data: Session | null; status: "loading" | "authenticated" | "unauthenticated" } {
+  const { isAuthenticated, userId, email, name, role } = useAuthStore();
+  if (!isAuthenticated) return { data: null, status: "unauthenticated" };
   return {
     data: {
-      user: {
-        id: "1",
-        name: "Demo User",
-        email: "demo@example.com",
-        role: "admin",
-      },
-      expires: "2099-12-31T23:59:59Z",
+      user: { id: userId, name, email, role: role as Session["user"]["role"] },
+      expires: "",
     },
     status: "authenticated",
   };
 }
 
 export function signIn(): void {
-  /* stub — use useAuthStore instead */
+  useAuthStore.getState().login();
 }
 
 export function signOut(): void {
-  /* stub — use useAuthStore instead */
+  useAuthStore.getState().logout();
 }

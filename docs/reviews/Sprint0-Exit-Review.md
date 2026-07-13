@@ -17,7 +17,7 @@
 ### Expected (per Engineering-Standards §2.1)
 
 ```
-openquery/
+schemaintern/
 ├── .github/workflows/
 ├── .github/CODEOWNERS
 ├── .github/PULL_REQUEST_TEMPLATE.md
@@ -72,8 +72,6 @@ openquery/
 | asyncpg | >=0.30.0 | Range | None known |
 | sqlalchemy[asyncio] | >=2.0.36 | Range | None known |
 | alembic | >=1.14.0 | Range | None known |
-| redis[hiredis] | >=5.2.0 | Range | None known |
-| qdrant-client | >=1.12.0 | Range | None known |
 | python-jose[cryptography] | >=3.3.0 | Range | None known |
 | passlib[bcrypt] | >=1.7.4 | Range | None known |
 | httpx | >=0.28.0 | Range | None known |
@@ -109,8 +107,8 @@ openquery/
 ## 3. Docker Audit
 
 ### Files Reviewed
-- `infra/docker/docker-compose.yml` — 8 services (postgres, redis, qdrant, backend, frontend, prometheus, grafana)
-- `infra/docker/docker-compose.db.yml` — 4 services (postgres, redis, qdrant, pgbouncer)
+- `infra/docker/docker-compose.yml` — 6 services (postgres, backend, frontend, prometheus, grafana)
+- `infra/docker/docker-compose.db.yml` — 2 services (postgres, pgbouncer)
 - `infra/docker/Dockerfile.backend` — Multi-stage (builder → dev → prod)
 - `infra/docker/Dockerfile.frontend` — Multi-stage (deps → build → prod)
 - `infra/docker/prometheus.yml` — Service discovery configs
@@ -134,7 +132,7 @@ openquery/
 ### Files Reviewed
 - `backend/app/main.py` — App factory
 - `backend/app/core/config.py` — Settings via pydantic-settings
-- `backend/app/core/database.py` — Async SQLAlchemy engine, Redis/Qdrant managers
+- `backend/app/core/database.py` — Async SQLAlchemy engine (Redis/Qdrant managers were removed)
 - `backend/app/core/di.py` — dependency-injector container
 - `backend/app/core/logging.py` — structlog configuration
 - `backend/app/core/health.py` — Health check functions with latency
@@ -147,7 +145,7 @@ openquery/
 
 | # | Finding | Severity | Impact | Remediation | Owner |
 |---|---------|----------|--------|-------------|-------|
-| BE-01 | **Duplicate health check implementations** | **HIGH** | `database.py` has `check_db_health()` / `check_redis_health()` / `check_qdrant_health()` (returns bool). `health.py` has `check_postgres()` / `check_redis()` / `check_qdrant()` (returns `HealthResult` with latency). Two code paths, two behaviors. `api/v1/health.py` uses `database.py` versions; `health.py` is unused. | Remove `health.py` (dead code). The `database.py` versions are wired to endpoints. Or keep `health.py` and wire it, but don't keep both. | Backend Agent |
+| BE-01 | **Duplicate health check implementations** | **HIGH** | `database.py` has `check_db_health()` (returns bool). `health.py` has `check_postgres()` (returns `HealthResult` with latency). Two code paths, two behaviors. `api/v1/health.py` uses `database.py` versions; `health.py` is unused. | Remove `health.py` (dead code). The `database.py` versions are wired to endpoints. Or keep `health.py` and wire it, but don't keep both. | Backend Agent |
 | BE-02 | **JWT algorithm is HS256, must be RS256** | **HIGH** | Security-Specification §5.2 mandates RS256. HS256 is symmetric — same key signs and verifies. RS256 uses public/private key pair. | Change `jwt_algorithm` default to `"RS256"` in `config.py`. Requires RSA key pair generation in auth setup. | Backend Agent |
 | BE-03 | **Auth placeholders always return anonymous user** | Low | `get_current_user` returns `{"sub": "anonymous", "role": "guest"}` when no JWT provided. Acceptable for Sprint 0 but permits unauthenticated access to all endpoints. | Acceptable for Sprint 0. Document as known gap for Sprint 1. | — |
 | BE-04 | `config.py` sets `env_file=".env"` but `backend/.env` doesn't exist | Low | Settings will use defaults. Works for development but may confuse new devs. | Create `backend/.env` from `.env.example` or ensure `make install` copies it. | Backend Agent |
@@ -216,9 +214,6 @@ openquery/
 
 ### Files Reviewed
 - `.devcontainer/devcontainer.json` — Dev container
-- `infra/terraform/{main,variables,outputs,versions}.tf` — Terraform stubs
-- `infra/k8s/{namespace,backend-deployment,backend-service,configmap,hpa}.yaml` — K8s manifests
-- `infra/helm/openquery/{Chart.yaml,values.yaml,templates/*}` — Helm chart
 - `infra/scripts/{setup,docker-build,docker-push}.sh`
 
 ### Findings
@@ -268,7 +263,7 @@ openquery/
 
 | # | Finding | Severity | Impact | Remediation | Owner |
 |---|---------|----------|--------|-------------|-------|
-| OBS-01 | Prometheus scrape config references services (postgres, redis, qdrant exporters) not deployed in main docker-compose | Low | Prometheus will log `target not found` for those exporters. Not a Sprint 0 blocker. | Add exporter sidecars or remove from scrape config until Sprint 7. | Infrastructure Agent |
+| OBS-01 | Prometheus scrape config references services (postgres exporter) not deployed in main docker-compose | Low | Prometheus will log `target not found` for those exporters. Not a Sprint 0 blocker. | Add exporter sidecars or remove from scrape config until Sprint 7. | Infrastructure Agent |
 | OBS-02 | Grafana is deployed with no dashboards or datasources | Low | Empty shell. No pre-configured dashboards for RED metrics. | Add dashboards as JSON in Sprint 7. Acceptable for Sprint 0. | — |
 | OBS-03 | OpenTelemetry is configured in dependencies but not wired into app | Medium | `opentelemetry-instrumentation-fastapi` is a dependency but not used in `create_app()`. No traces are being exported. | Wire OTel instrumentation into app factory in Sprint 1. | Backend Agent |
 | OBS-04 | Structured logging works but no log aggregation configured | Low | Logs go to stdout. Production needs Loki/Elasticsearch. | Sprint 7 hardening. | — |
@@ -288,7 +283,7 @@ openquery/
 |---|---------|----------|--------|-------------|-------|
 | CI-01 | **Lint job doesn't run frontend ESLint** | **HIGH** | Frontend code changes won't be linted in CI. TypeScript errors may slip through. | Add `npx eslint frontend/ --ext .ts,.tsx` step to lint job. | Infrastructure Agent |
 | CI-02 | **CI uses `uv pip install --system -e "backend/[dev]"`** | **HIGH** | This installs into the system Python, which could conflict with GitHub Actions runners. Also installs dev dependencies for all jobs unnecessarily. | Use `uv sync --no-dev` for non-test jobs, or set up proper virtual environment. | Infrastructure Agent |
-| CI-03 | Test job requires Postgres/Redis/Qdrant services but tests don't use them | Medium | 3 CI service containers run for 6 tests that don't need them. Wastes ~30s per CI run. Tests skip gracefully but services add cost. | Split unit and integration tests. Move integration tests to separate job with services. | QA Agent |
+| CI-03 | Test job requires Postgres services but tests don't use them | Medium | CI service containers run for tests that don't need them. Wastes ~30s per CI run. Tests skip gracefully but services add cost. | Split unit and integration tests. Move integration tests to separate job with services. | QA Agent |
 | CI-04 | Build job uses Docker cache from GitHub Actions but no cache key invalidation | Low | Cache may become stale. Acceptable for Sprint 0. | Fine-tune in Sprint 7. | — |
 | CI-05 | Security job may fail due to Trivy/npm audit findings in dependencies | Medium | `exit-code: 1` on Trivy means any finding blocks CI. Could cause frequent false positives. | Set `exit-code: 0` initially, fix findings iteratively. | Infrastructure Agent |
 
@@ -313,7 +308,7 @@ openquery/
 
 | # | Finding | Severity | Impact | Remediation | Owner |
 |---|---------|----------|--------|-------------|-------|
-| TST-01 | **Root-level `tests/unit/test_config.py` tests a different `Settings` class** | **HIGH** | `TestSettings` uses `OPENQUERY__` prefix and different field names than the actual `Settings` in `backend/app/core/config.py`. These tests pass but validate the wrong configuration model. | Either remove root-level tests (move integration to backend/tests/) or align them with the real `Settings` class. | QA Agent |
+| TST-01 | **Root-level `tests/unit/test_config.py` tests a different `Settings` class** | **HIGH** | `TestSettings` uses `SCHEMAINTERN__` prefix and different field names than the actual `Settings` in `backend/app/core/config.py`. These tests pass but validate the wrong configuration model. | Either remove root-level tests (move integration to backend/tests/) or align them with the real `Settings` class. | QA Agent |
 | TST-02 | **No frontend tests** | **HIGH** | `package.json` has no `test` script. No Jest/Vitest/Playwright configured. Frontend has no test coverage at all. | Install Vitest + React Testing Library. Add at least smoke test for layout. | Frontend Agent |
 | TST-03 | Test coverage is 0% for meaningful code | Medium | Only health endpoint tests exist. No tests for middleware, auth, config edge cases. | Acceptable for Sprint 0. Coverage targets for Sprint 1. | — |
 | TST-04 | Integration tests skip silently with no CI warning | Low | `pytest -m "not integration"` would need to be used, but currently all tests run without markers. | Add `integration` marker to integration tests. | QA Agent |

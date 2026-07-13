@@ -1,6 +1,6 @@
 # Security Audit Report
 
-**Project:** OpenQuery
+**Project:** SchemaIntern
 **Date:** 2026-07-11
 **Risk Level:** CRITICAL
 **Overall Score:** 25/100 (F)
@@ -100,7 +100,7 @@ The global exception handler returns raw exception strings to API consumers, lea
 #### S-10: Default Database Credentials in Config
 **File:** `backend/app/core/config.py:20-21`
 ```python
-postgres_dsn: str = "postgresql+asyncpg://openquery:openquery_dev@localhost:5432/openquery"
+postgres_dsn: str = "postgresql+asyncpg://schemaintern:schemaintern_dev@localhost:5432/schemaintern"
 ```
 Production database credentials with default password in source code.
 

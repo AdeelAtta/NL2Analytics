@@ -1,6 +1,6 @@
 # Release Checklist
 
-**Project:** OpenQuery
+**Project:** SchemaIntern
 **Date:** 2026-07-11
 **Status:** ❌ NOT READY FOR RELEASE
 

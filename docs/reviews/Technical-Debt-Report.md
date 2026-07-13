@@ -1,6 +1,6 @@
 # Technical Debt Report
 
-**Project:** OpenQuery
+**Project:** SchemaIntern
 **Date:** 2026-07-11
 **Estimated Debt:** ~4-6 weeks to address identified items
 **Score:** 45/100 (HIGH DEBT)

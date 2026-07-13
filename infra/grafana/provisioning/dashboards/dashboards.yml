@@ -1,9 +1,9 @@
 apiVersion: 1
 
 providers:
-  - name: OpenQuery
+  - name: SchemaIntern
     orgId: 1
-    folder: OpenQuery
+    folder: SchemaIntern
     type: file
     disableDeletion: false
     editable: true

@@ -20,137 +20,108 @@ SchemaIntern connects to enterprise databases (PostgreSQL, MySQL, Snowflake, Big
 |-----------|-----------|
 | Backend | Python 3.12, FastAPI, SQLAlchemy |
 | Frontend | Next.js 15, TypeScript, Tailwind, shadcn/ui |
-| Database | PostgreSQL 16, Redis 7, Qdrant 1.12 |
+| Database | PostgreSQL 16 |
 | AI | LangGraph, vLLM/SGLang, SQLCoder |
-| Infrastructure | Docker, K8s, Terraform, Helm |
-| CI/CD | GitHub Actions, ArgoCD |
+| Infrastructure | Docker |
+| CI/CD | GitHub Actions |
 | Observability | OpenTelemetry, Prometheus, Grafana |
 
 ## Quick Start
 
-### Option A: All-in-One Docker (recommended)
+### Option A: Dev Stack (recommended)
 
-Starts everything — database, cache, backend & frontend — with hot-reload.
+Starts everything with hot-reload — PostgreSQL, backend, and frontend.
 
 ```bash
-# Start all services
 docker compose -f docker-compose.dev.yml up --build
-
-# Background mode
-docker compose -f docker-compose.dev.yml up --build -d
-
-# Verify
-curl http://localhost:8100/api/v1/health/live
-open http://localhost:3000
 ```
 
-Add your HuggingFace token to `.env.dev` for LLM-powered SQL generation:
+Set your HuggingFace token for AI-generated table/column descriptions:
 
 ```env
-HF_TOKEN=hf_xxxxxxxxxx
+# Get a free token: https://huggingface.co/settings/tokens
+HF_TOKEN=hf_your_token_here
 ```
+
+| Service | URL |
+|---|---|
+| Frontend | `http://localhost:3000` |
+| API | `http://localhost:8100` |
 
 Stop with `docker compose -f docker-compose.dev.yml down`.
 
-### Option B: Native (manual)
+### Option B: Production Stack
+
+Starts with nginx reverse proxy — single port, no hot-reload.
+
+```bash
+cp .env.prod.example .env.prod
+# Edit .env.prod with strong secrets
+docker compose up --build
+```
+
+| Service | URL |
+|---|---|
+| App | `http://localhost:8080` |
+
+Migrations run automatically on startup.
+
+### Option C: Native (manual)
 
 #### Prerequisites
 
-- Python 3.12+
-- Node.js 20+
-- Docker & Docker Compose
-- uv (Python package manager): `pip install uv`
-
-#### Setup
+- Python 3.12+, Node.js 20+, Docker
+- uv: `pip install uv`
 
 ```bash
-# Install dependencies
 make install
-
-# Set up environment
 cp .env.example .env
-
-# Start infrastructure services
 docker compose -f infra/docker/docker-compose.db.yml up -d
-
-# Run database migrations
 make db-migrate
-
-# Start development servers
 make dev
 ```
 
-#### Verify
+| Service | URL |
+|---|---|
+| Frontend | `http://localhost:3000` |
+| API | `http://localhost:8100` |
 
-```bash
-# Backend health
-curl http://localhost:8100/api/v1/health/live
+### Test Databases
 
-# Frontend
-open http://localhost:3000
-```
+On first start, all 8 test databases are auto-seeded:
 
-### Seed Data
+| Database | Description |
+|---|---|
+| `chinook` | Music store (artists, albums, tracks) |
+| `dvdrental` | DVD rental store |
+| `happiness_index` | World happiness report |
+| `lego` | Lego sets and parts |
+| `netflix` | Netflix titles |
+| `pagila` | DVD rental (PostgreSQL port) |
+| `periodic_table` | Chemical elements |
+| `titanic` | Passenger survival data |
 
-On first startup, PostgreSQL is automatically seeded with two test databases:
+Connect from the web UI via **Settings → Connections → Add Connection**:
 
-| Database | Schema | Rows |
+| Field | Docker | Native |
 |---|---|---|
-| `titanic` | `passenger` | 30 passengers |
-| `employees` | `departments`, `employees`, `dept_emp`, `titles`, `salaries` | 10 employees |
-
-Connect to these from the web UI via **Settings → Connections → Add Connection**:
-
-| Field | Value (Docker) | Value (Native) |
-|---|---|---|
-| Host | `host.docker.internal` | `localhost` |
+| Host | `postgres` | `localhost` |
 | Port | `5432` | `5432` |
-| Database | `titanic` or `employees` | `titanic` or `employees` |
+| Database | `titanic` (or any above) | same |
 | User | `postgres` | `postgres` |
 | Password | `postgres` | `postgres` |
 
-Then try queries like `"how many male passengers?"` or `"list all employees in Sales"`.
+Try queries like `"how many male passengers?"` or `"all employees in Sales"`.
 
-> **Docker tip**: Use `host.docker.internal` as the host — it resolves to your host machine from inside the container. The UI will also show this hint when the host field is set to `localhost`.
+> **Docker tip**: Use `postgres` as the host (Docker service name) when connecting from the backend container. `host.docker.internal` is for reaching your host machine, not other containers.
 
-### Adding More Databases
+### Environment Files
 
-Additional SQL dumps are available in `test-databases/`:
-
-| File | Database name |
-|---|---|
-| `lego.sql` | `lego` |
-| `chinook.sql` | `chinook` |
-| `netflix.sql` | `netflix` |
-| `pagila.sql` | `pagila` |
-| `dvdrental.sql` | `dvdrental` |
-| `periodic_table.sql` | `periodic_table` |
-| `happiness_index.sql` | `happiness_index` |
-
-Seed any of them on demand:
-
-```bash
-# Seed a single database
-make seed DB=lego
-
-# Seed everything
-make seed-all
-
-# If running Docker (not needed when using docker-compose.dev.yml):
-make seed-docker DB=chinook
-```
-
-The script auto-detects your local PostgreSQL or Docker environment.
-
-### Docker Dev Services
-
-| Service | Port | Hot-Reload |
+| File | Used by | Purpose |
 |---|---|---|
-| `postgres` | 5432 | — (auto-seeded on first run) |
-| `redis` | 6379 | — |
-| `qdrant` | 6333 / 6334 | — |
-| `backend` | 8100 | ✅ uvicorn `--reload` + bind mount |
-| `frontend` | 3000 | ✅ Next.js Turbopack HMR + bind mount |
+| `.env.dev` | `docker-compose.dev.yml` | Dev defaults (tracked in git) |
+| `.env.prod` | `docker-compose.yml` | Production secrets (not tracked) |
+| `.env.example` | — | Template with all variables documented |
 
 ## Workflow Commands
 
@@ -166,6 +137,11 @@ The script auto-detects your local PostgreSQL or Docker environment.
 | `make format` | Format all code |
 | `make build-backend` | Build backend Docker image |
 | `make build-frontend` | Build frontend Docker image |
+| `make prod` | Start production stack |
+| `make prod-logs` | Tail production logs |
+| `make prod-down` | Stop production stack |
+| `make dev-up` | Start dev stack (`docker compose -f docker-compose.dev.yml up -d --build`) |
+| `make dev-down` | Stop dev stack |
 | `make db-migrate` | Run database migrations |
 | `make db-seed` | Seed placeholder data (legacy) |
 | `make seed DB=lego PASSWORD=123` | Seed a test database |
@@ -177,11 +153,34 @@ The script auto-detects your local PostgreSQL or Docker environment.
 
 | Command | Description |
 |---|---|
-| `docker compose -f docker-compose.dev.yml up --build` | Start everything with hot-reload |
-| `docker compose -f docker-compose.dev.yml up --build -d` | Start in background |
-| `docker compose -f docker-compose.dev.yml down` | Stop all services |
+| `docker compose -f docker-compose.dev.yml up --build` | Start dev stack (hot-reload) |
+| `docker compose -f docker-compose.dev.yml up --build -d` | Dev stack in background |
+| `docker compose -f docker-compose.dev.yml down` | Stop dev stack |
 | `docker compose -f docker-compose.dev.yml logs -f backend` | Tail backend logs |
-| `docker compose -f infra/docker/docker-compose.db.yml up -d` | Start only infra (PG, Redis, Qdrant) |
+| `docker compose up --build` | Start production stack (nginx proxy) |
+| `docker compose down` | Stop production stack |
+| `docker compose -f infra/docker/docker-compose.db.yml up -d` | Start only PostgreSQL + PgBouncer |
+
+### Production Stack
+
+```bash
+# 1. Create env file with strong secrets
+cp .env.prod.example .env.prod
+# Edit .env.prod — set POSTGRES_PASSWORD and JWT_SECRET
+
+# 2. Start
+docker compose up -d --build
+
+# 3. Access
+open http://localhost:8080
+```
+
+| Service | Internal | Exposed |
+|---|---|---|
+| `nginx` | 80 | **8080** |
+| `backend` | 8100 | — |
+| `frontend` | 3000 | — |
+| `postgres` | 5432 | — |
 
 ### Manual seeds (without Make)
 
@@ -203,22 +202,23 @@ POSTGRES_PASSWORD=123 ./bin/seed.sh --all
 
 ```
 schemaintern/
-├── backend/            # Python FastAPI services
-│   ├── public-api/     # External API (port 8100)
-│   ├── ke-api/         # Knowledge Engine API (port 8200)
-│   ├── query-pipeline/ # NL2SQL agent pipeline
-│   ├── schema-intel/   # Schema intelligence workers
-│   ├── learning-loop/  # Self-learning workers
-│   ├── auth/           # Authentication service
-│   └── lib/            # Shared Python libraries
-├── frontend/           # Next.js application
-├── infra/              # Infrastructure
-│   ├── docker/         # Dockerfiles and Compose
-│   ├── k8s/            # Kubernetes manifests
-│   ├── terraform/      # Terraform modules
-│   └── helm/           # Helm charts
-├── shared/             # Shared type definitions
-└── docs/               # Documentation
+├── backend/               # Python FastAPI backend
+│   ├── app/               # External API (port 8100) — auth, query, schema
+│   ├── ke/                # Knowledge Engine API (port 8200)
+│   ├── schema_intelligence/  # Schema discovery & annotation
+│   ├── shared/            # Shared Pydantic models
+│   ├── alembic/           # DB migrations
+│   ├── scripts/           # Utility scripts
+│   ├── tests/             # Backend tests
+│   └── data/              # File-based storage (users, tenants)
+├── frontend/              # Next.js application (port 3000)
+├── infra/                 # Infrastructure
+│   ├── docker/            # Dockerfiles and Compose
+│   ├── grafana/           # Grafana dashboards
+│   └── scripts/           # Utility scripts
+├── tests/                 # Root integration/unit tests
+├── docs/                  # Documentation
+└── test-databases/        # SQL seed data
 ```
 
 ## Development
@@ -234,6 +234,10 @@ All documentation is in `/docs/`. Key documents:
 - [Database Specification](docs/specifications/Database-Specification.md)
 - [Engineering Standards](docs/specifications/Engineering-Standards.md)
 - [Implementation Plan](docs/Implementation-Plan.md)
+
+## Contributing
+
+See [Contributing Guide](docs/contributing.md)
 
 ## License
 

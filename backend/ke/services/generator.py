@@ -85,19 +85,6 @@ class NL2SQLGenerator:
                 error="Rule-based generation is disabled. Configure an LLM provider.",
                 latency_ms=0.0, cost=0.0,
             )
-            elapsed = (time.perf_counter() - start) * 1000
-            return GenerationResult(
-                id=gen_id,
-                query=query,
-                sql=sql,
-                status=GenerationStatus.COMPLETED,
-                model_tier=ModelTier.NONE.value,
-                model_name="rule_based",
-                intent=intent.model_dump() if isinstance(intent, QueryIntent) else intent,
-                candidates=[CandidateResult(sql=sql, model_tier=ModelTier.NONE.value, model_name="rule_based", score=1.0, latency_ms=elapsed)],
-                latency_ms=elapsed,
-                cost=0.0,
-            )
 
         candidates: list[CandidateResult] = []
         last_error: str | None = None

@@ -22,9 +22,9 @@ export function HistorySidebar() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    apiGet<{ data: HistoryItem[] }>("/history?page_size=50").then((d) => {
-      if (d) setItems(d.data ?? []);
-    });
+    apiGet<{ data: HistoryItem[] }>("/history?page_size=50")
+      .then((d) => setItems(d.data ?? []))
+      .catch(() => {});
   }, []);
 
   const filtered = useMemo(() => {

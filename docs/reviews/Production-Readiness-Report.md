@@ -1,6 +1,6 @@
 # Production Readiness Report
 
-**Project:** OpenQuery
+**Project:** SchemaIntern
 **Date:** 2026-07-11
 **Status:** ❌ NOT PRODUCTION-READY
 **Score:** 20/100

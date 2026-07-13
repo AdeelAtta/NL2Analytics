@@ -11,8 +11,8 @@
 - Python tooling: `pyproject.toml`, ruff, mypy, pytest configured
 - Backend foundation: FastAPI app factory, config, DI, structlog, health endpoints, middleware
 - Frontend foundation: Next.js 15 + TypeScript + Tailwind + shadcn/ui, 10 pages
-- Database foundation: Alembic migrations, async SQLAlchemy, Redis/Qdrant managers
-- Docker Compose: 8 services (postgres, redis, qdrant, backend, frontend, prometheus, grafana)
+- Database foundation: Alembic migrations, async SQLAlchemy (Redis/Qdrant managers were removed)
+- Docker Compose: 6 services (postgres, backend, frontend, prometheus, grafana)
 - Dockerfiles: Multi-stage for backend + frontend
 - CI/CD: `.github/workflows/ci.yml` — 6 jobs
 - Terraform stubs, K8s manifests, Helm chart, dev container
@@ -101,7 +101,7 @@ These corrective actions must be completed first:
 | Order | Task | Epic | Agent | Notes |
 |-------|------|------|-------|-------|
 | 1 | TASK-009 — Define Schema Store data models | EP-002 | KE Agent | First EP-002 task; P0 |
-| 2 | TASK-016 — Setup Qdrant client | EP-003 | KE Agent | Parallel with EP-002 work |
+| 2 | TASK-016 — Setup Qdrant client (removed — vector search removed from scope) | EP-003 | KE Agent | Parallel with EP-002 work |
 | 3 | SPIKE-001 — Context Layer Accuracy | EP-017 | Research | Must complete before EP-007 |
 | 4 | SPIKE-002 — Cold-Start Strategy | EP-017 | Research | Must complete before EP-007 |
 | 5 | SPIKE-003 — Model Router Accuracy | EP-017 | Research | Must complete before EP-008 |

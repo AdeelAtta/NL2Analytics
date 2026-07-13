@@ -190,34 +190,4 @@ class TestSchemaResolver:
         assert len(result["tables"]) == 1
         assert result["columns"] == []
 
-    @pytest.mark.asyncio
-    async def test_resolve_via_vector_fallback(self) -> None:
-        embedding_svc = MagicMock()
-        embedding_svc.embed_text = AsyncMock()
-        embedding_svc.embed_text.return_value = MagicMock(dense_vector=[0.1, 0.2])
 
-        vector_repo = MagicMock()
-        vector_repo.search = AsyncMock()
-
-        payload = MagicMock()
-        payload.content_type = "schema_element"
-        payload.text = "users"
-        payload.metadata = {"type": "table", "name": "users", "id": "t1"}
-
-        result_item = MagicMock()
-        result_item.score = 0.9
-        result_item.payload = payload
-        result_item.dense_score = 0.9
-
-        vector_repo.search.return_value = [result_item]
-
-        resolver = SchemaResolver(
-            embedding_service=embedding_svc,
-            vector_repo=vector_repo,
-        )
-
-        intent = QueryIntent(query_type=QueryType.UNKNOWN, tables=[])
-        result = await resolver.resolve(intent, question="show me users")
-
-        assert len(result["tables"]) >= 1
-        assert any("users" in t["name"] for t in result["tables"])

@@ -1,6 +1,6 @@
 # Security Hardening Guide
 
-**Project:** OpenQuery | **Date:** 2026-07-11
+**Project:** SchemaIntern | **Date:** 2026-07-11
 
 ---
 
@@ -119,7 +119,7 @@ HF_TOKEN=<hf-token>
 
 # SECURITY — Production overrides
 LOG_LEVEL=WARNING
-CORS_ORIGINS=https://app.openquery.io
+CORS_ORIGINS=https://app.schemaintern.io
 ENVIRONMENT=production
 ENABLE_SENTRY=true
 SENTRY_DSN=<sentry-dsn>
@@ -148,7 +148,7 @@ containers:
 
 ### 3.3 Network Policies
 ```yaml
-# Default deny ingress (already applied in infra/k8s/network-policy.yaml)
+# Default deny ingress (removed during infra cleanup)
 # Add egress restrictions:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -197,7 +197,7 @@ spec:
 
 **SEV-1 Initial Notice:**
 ```
-Subject: [INCIDENT] OpenQuery — SEV-1 — [Brief Title]
+Subject: [INCIDENT] SchemaIntern — SEV-1 — [Brief Title]
 Channel: #incidents
 
 Summary: [What happened, what's impacted]
@@ -209,7 +209,7 @@ Status: INVESTIGATING
 
 **SEV-1 Resolution Notice:**
 ```
-Subject: [RESOLVED] OpenQuery — SEV-1 — [Brief Title]
+Subject: [RESOLVED] SchemaIntern — SEV-1 — [Brief Title]
 
 Summary: [Root cause]
 Resolution: [What was done]

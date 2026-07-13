@@ -1,6 +1,4 @@
-# Dev environment — starts all services with hot-reload for local development.
-# Usage: docker compose -f docker-compose.dev.yml up --build
-# Stop:  docker compose -f docker-compose.dev.yml down
+name: schemaintern-dev
 
 services:
   postgres:
@@ -14,32 +12,10 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./infra/docker/postgres-init:/docker-entrypoint-initdb.d
+      - ./test-databases:/test-databases
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 5s
-      timeout: 5s
-      retries: 10
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
-  qdrant:
-    image: qdrant/qdrant:latest
-    ports:
-      - "6333:6333"
-      - "6334:6334"
-    volumes:
-      - qdrant_data:/qdrant/storage
-    healthcheck:
-      test: ["CMD-SHELL", "pidof qdrant || exit 1"]
-      interval: 10s
       timeout: 5s
       retries: 10
 
@@ -53,17 +29,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
-      qdrant:
-        condition: service_healthy
     env_file:
       - .env.dev
     environment:
       POSTGRES_DSN: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/upl
       POSTGRES_DSN_SYNC: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/upl
-      REDIS_URL: redis://redis:6379/0
-      QDRANT_URL: http://qdrant:6333
       JWT_SECRET: dev-jwt-secret-change-in-production
       ENVIRONMENT: development
       DEBUG: "true"
@@ -89,4 +59,3 @@ services:
 
 volumes:
   pgdata:
-  qdrant_data:

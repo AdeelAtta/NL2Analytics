@@ -11,7 +11,7 @@ import { useAuthStore } from "@/stores/auth";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [defaultTab] = useState("signin");
+  const defaultTab = "signin";
   const loginWithEmail = useAuthStore((s) => s.loginWithEmail);
   const register = useAuthStore((s) => s.register);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);

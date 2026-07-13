@@ -1190,25 +1190,11 @@ API_ERROR_CLASSIFICATION = {
 
 ### 19.4 Qdrant Metrics
 
-| Metric | Type | Labels | Source | Target |
-|--------|------|--------|--------|--------|
-| `qdrant_grpc_status` | Gauge | endpoint | qdrant_exporter | 1 |
-| `qdrant_collection_count` | Gauge | — | qdrant_exporter | Track growth |
-| `qdrant_points_count` | Gauge | collection | qdrant_exporter | Track volume |
-| `qdrant_segment_count` | Gauge | collection | qdrant_exporter | Track optimization |
-| `qdrant_query_latency_ms` | Histogram | collection | qdrant_exporter | P95 < 10ms |
-| `qdrant_optimization_status` | Gauge | collection | qdrant_exporter | 0 = idle |
-| `qdrant_replica_set_status` | Gauge | collection | qdrant_exporter | All healthy |
+Removed during cleanup — Qdrant metrics removed.
 
 ### 19.5 Redis Metrics
 
-| Metric | Type | Labels | Source | Target |
-|--------|------|--------|--------|--------|
-| `redis_up` | Gauge | — | redis_exporter | 1 |
-| `redis_memory_usage_bytes` | Gauge | — | redis_exporter | < 80% of maxmemory |
-| `redis_hit_ratio` | Gauge | — | redis_exporter | > 90% |
-| `redis_connected_clients` | Gauge | — | redis_exporter | < maxclients |
-| `redis_latency_ms` | Histogram | — | redis_exporter | P95 < 1ms |
+Removed during cleanup — Redis metrics removed.
 
 ---
 

@@ -177,34 +177,6 @@ class TestSchemaRoutes:
         assert body["data"]["relationship_type"] == "foreign_key"
 
 
-class TestVectorRoutes:
-    async def test_list_collections(self, async_ke_client_auth: httpx.AsyncClient) -> None:
-        resp = await async_ke_client_auth.get("/v1/ke/vector/collections")
-        assert resp.status_code == 200
-        body = resp.json()
-        assert body["success"] is True
-
-    async def test_ensure_collection(self, async_ke_client_auth: httpx.AsyncClient) -> None:
-        resp = await async_ke_client_auth.post(
-            "/v1/ke/vector/collections/ensure?tenant_id=tenant_1"
-        )
-        assert resp.status_code == 200
-        body = resp.json()
-        assert body["success"] is True
-
-    async def test_delete_collection(self, async_ke_client_auth: httpx.AsyncClient) -> None:
-        resp = await async_ke_client_auth.delete("/v1/ke/vector/collections/tenant_1")
-        assert resp.status_code == 200
-        body = resp.json()
-        assert body["success"] is True
-
-    async def test_count_points(self, async_ke_client_auth: httpx.AsyncClient) -> None:
-        resp = await async_ke_client_auth.get("/v1/ke/vector/count?tenant_id=tenant_1")
-        assert resp.status_code == 200
-        body = resp.json()
-        assert body["success"] is True
-
-
 class TestOpenAPI:
     async def test_docs_accessible_without_auth(self, async_ke_client: httpx.AsyncClient) -> None:
         resp = await async_ke_client.get("/docs")

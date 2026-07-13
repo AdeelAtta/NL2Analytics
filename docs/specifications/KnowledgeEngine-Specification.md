@@ -1225,7 +1225,7 @@ When context exceeds the token limit, items are removed in this order (last remo
 
 ### 7.7 Caching
 
-See [Cache Store (Redis) §13.3](Database-Specification.md#133-query-cache-schema) for cache schema.
+Caching uses PostgreSQL-based query result caching. See [Cache Store](Database-Specification.md#13-cache-store) for details.
 
 **Invalidation triggers**:
 - Schema sync (full tenant cache flush)

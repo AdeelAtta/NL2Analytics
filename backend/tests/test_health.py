@@ -17,8 +17,6 @@ class TestHealthEndpoints:
         assert data["status"] in ("ok", "degraded")
         assert "checks" in data
         assert "database" in data["checks"]
-        assert "redis" in data["checks"]
-        assert "qdrant" in data["checks"]
 
     async def test_version(self, async_client: AsyncClient) -> None:
         response = await async_client.get("/api/v1/health/version")

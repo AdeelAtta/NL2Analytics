@@ -20,7 +20,7 @@
 3. [Kubernetes](#3-kubernetes)
 4. [Ingress](#4-ingress)
 5. [Service Mesh](#5-service-mesh)
-6. [Terraform](#6-terraform)
+6. [Infrastructure-as-Code](#6-infrastructure-as-code)
 7. [Secrets Management](#7-secrets-management)
 8. [Monitoring](#8-monitoring)
 9. [Logging](#9-logging)
@@ -201,203 +201,13 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 ## 3. Kubernetes
 
-### 3.1 Cluster Specifications
-
-| Environment | Cluster Type | K8s Version | Node Pools | Node Count | Region |
-|-------------|-------------|-------------|-----------|-----------|--------|
-| Dev | EKS (single-AZ) | 1.31 | 3 | 3/10 | us-east-1 |
-| Staging | EKS (multi-AZ) | 1.31 | 4 | 5/20 | us-east-1 |
-| Production | EKS (multi-AZ) | 1.31 | 4 | 10/50 | us-east-1, us-west-2 |
-| On-prem | Customer K8s | 1.28+ | Custom | Custom | Customer DC |
-
-### 3.2 Node Pool Configuration
-
-**Pool: System** — t3.medium (dev) / t3.large (prod), 2/5 nodes, no taints, spot in dev only
-- Services: ke-api, public-api, frontend, learning-loop
-
-**Pool: Data Store** — r6i.xlarge (mem-optimized), 2/5 nodes, taint dedicated=ke-store:NoSchedule, never spot
-- Services: PostgreSQL (operator-managed), Qdrant
-- Autoscaling: Disabled (stateful)
-
-**Pool: Pipeline CPU** — c6i.2xlarge (compute-optimized), 2/10 nodes, no taints, spot in dev/staging
-- Services: schema-intel, query-pipeline (pre-GPU stages)
-
-**Pool: Pipeline GPU** — p5.48xlarge (MI300X) or g6e.12xlarge (NVIDIA), 2/10 nodes, taint dedicated=gpu:NoSchedule, never spot
-- Services: query-pipeline (LLM inference)
-
-### 3.3 Pod Specification (ke-api example)
-
-```
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ke-api
-spec:
-  replicas: 3
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
-  template:
-    spec:
-      containers:
-      - name: ke-api
-        image: {registry}/ke-api:git-{sha}
-        ports:
-        - containerPort: 8200
-        resources:
-          requests: { cpu: 500m, memory: 512Mi }
-          limits: { cpu: 2, memory: 2Gi }
-        livenessProbe:
-          httpGet: { path: /health, port: 8200 }
-          initialDelaySeconds: 10
-          periodSeconds: 30
-        readinessProbe:
-          httpGet: { path: /health, port: 8200 }
-          initialDelaySeconds: 5
-          periodSeconds: 10
-        lifecycle:
-          preStop:
-            exec:
-              command: ["sh", "-c", "sleep 10"]
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            podAffinityTerm:
-              labelSelector:
-                matchExpressions:
-                - key: app
-                  operator: In
-                  values: [ke-api]
-              topologyKey: topology.kubernetes.io/zone
-      topologySpreadConstraints:
-      - maxSkew: 1
-        topologyKey: kubernetes.io/hostname
-        whenUnsatisfiable: DoNotSchedule
-        labelSelector:
-          matchLabels: { app: ke-api }
-```
-
-### 3.4 GPU Pod Specification
-
-```
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: query-pipeline-gpu
-spec:
-  replicas: 2
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 0
-      maxUnavailable: 1
-  template:
-    spec:
-      nodeSelector:
-        pool: pipeline-gpu
-      tolerations:
-      - key: dedicated
-        operator: Equal
-        value: gpu
-        effect: NoSchedule
-      containers:
-      - name: inference
-        image: {registry}/query-pipeline-gpu:git-{sha}
-        resources:
-          requests: { cpu: 4, memory: 16Gi, amd.com/gpu: 1 }
-          limits: { cpu: 16, memory: 32Gi, amd.com/gpu: 1 }
-      affinity:
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchExpressions:
-              - key: app
-                operator: In
-                values: [query-pipeline-gpu]
-            topologyKey: kubernetes.io/hostname
-```
-
-### 3.5 Helm Chart Structure
-
-```
-infra/charts/
-+-- openquery/
-|   +-- Chart.yaml
-|   +-- values.yaml
-|   +-- values/ {dev,staging,prod,air-gapped}.yaml
-|   +-- templates/
-|       +-- _helpers.tpl, namespace.yaml, serviceaccount.yaml
-|       +-- configmap.yaml, secrets.yaml
-|       +-- deployment-{ke-api,public-api,schema-intel,query-pipeline,frontend,learning-loop}.yaml
-|       +-- statefulset-{postgres,qdrant}.yaml
-|       +-- service.yaml, ingress.yaml, hpa.yaml, pdb.yaml
-|       +-- networkpolicy.yaml, servicemonitor.yaml
-|       +-- opentelemetry-collector.yaml
-+-- dependencies/
-    +-- postgres-operator/   (Zalando)
-    +-- qdrant/              (Qdrant Helm)
-    +-- traefik/             (ingress)
-    +-- linkerd/             (service mesh)
-    +-- prometheus/          (kube-prometheus-stack)
-    +-- loki/ + tempo/       (logging + tracing)
-    +-- external-secrets/    (secrets)
-    +-- cert-manager/        (TLS)
-    +-- {nvidia,amd}-device-plugin/
-```
-
-### 3.6 Pod Disruption Budgets
-
-| Service | minAvailable | maxUnavailable |
-|---------|-------------|---------------|
-| ke-api | 2 | 1 |
-| public-api | 2 | 1 |
-| frontend | 1 | 1 |
-| query-pipeline (GPU) | 1 | 0 |
-| schema-intel | 1 | 1 |
-| learning-loop | 1 | 1 |
-| postgres | 1 | 0 |
-| qdrant | 1 | 0 |
-
-### 3.7 Resource Quotas
-
-```
-apiVersion: v1
-kind: ResourceQuota
-metadata:
-  name: openquery-quota
-spec:
-  hard:
-    requests.cpu: "50"
-    requests.memory: "100Gi"
-    limits.cpu: "100"
-    limits.memory: "200Gi"
-    requests.amd.com/gpu: 8
-    persistentvolumeclaims: 20
-    count/services: 30
-    count/ingresses: 5
----
-apiVersion: v1
-kind: LimitRange
-metadata:
-  name: openquery-limits
-spec:
-  limits:
-  - default:
-      cpu: "2"
-      memory: "2Gi"
-    defaultRequest:
-      cpu: "200m"
-      memory: "256Mi"
-    type: Container
-```
+Removed during cleanup — not currently used.
 
 ---
-
 
 ## 4. Ingress
+
+
 
 ### 4.1 Ingress Controller: Traefik
 
@@ -413,18 +223,18 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: openquery-ingress
+  name: schemaintern-ingress
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
     cert-manager.io/cluster-issuer: letsencrypt-prod
-    traefik.ingress.kubernetes.io/router.middlewares: openquery-rate-limit
+    traefik.ingress.kubernetes.io/router.middlewares: schemaintern-rate-limit
 spec:
   ingressClassName: traefik
   tls:
-  - hosts: [app.openquery.io]
-    secretName: openquery-tls
+  - hosts: [app.schemaintern.io]
+    secretName: schemaintern-tls
   rules:
-  - host: app.openquery.io
+  - host: app.schemaintern.io
     http:
       paths:
       - path: /api/v1
@@ -462,9 +272,9 @@ spec:
 
 | Environment | Certificate Source | Wildcard | Rotation |
 |-------------|-------------------|----------|----------|
-| Dev | Let's Encrypt (staging) | *.dev.openquery.io | Auto |
-| Staging | Let's Encrypt (prod) | *.staging.openquery.io | Auto |
-| Production | Let's Encrypt (prod) | *.openquery.io | Auto |
+| Dev | Let's Encrypt (staging) | *.dev.schemaintern.io | Auto |
+| Staging | Let's Encrypt (prod) | *.staging.schemaintern.io | Auto |
+| Production | Let's Encrypt (prod) | *.schemaintern.io | Auto |
 | On-prem | Customer or self-signed | Customer DNS | Manual |
 | Air-gapped | Self-signed CA | internal | Manual |
 
@@ -499,7 +309,7 @@ linkerd install | kubectl apply -f -
 linkerd check
 
 # Annotate namespace for mesh injection
-kubectl annotate ns openquery linkerd.io/inject=enabled
+kubectl annotate ns schemaintern linkerd.io/inject=enabled
 ```
 
 ### 5.3 mTLS Configuration
@@ -512,7 +322,7 @@ Linkerd automatically enables mTLS between meshed pods. No additional configurat
 apiVersion: linkerd.io/v1alpha2
 kind: ServiceProfile
 metadata:
-  name: ke-api.openquery.svc.cluster.local
+  name: ke-api.schemaintern.svc.cluster.local
 spec:
   routes:
   - name: GET /health
@@ -542,99 +352,9 @@ linkerd multicluster link --cluster-name us-west-2 | kubectl apply -f -
 
 ---
 
-## 6. Terraform
+## 6. Infrastructure-as-Code
 
-### 6.1 Module Structure
-
-```
-infra/terraform/
-+-- modules/
-|   +-- networking/
-|   |   +-- main.tf           # VPC, subnets (public/private), NAT gateways, IGW
-|   |   +-- variables.tf
-|   |   +-- outputs.tf        # vpc_id, subnet_ids, nat_gw_ips
-|   +-- eks/
-|   |   +-- main.tf           # EKS cluster, node groups, IRSA, OIDC
-|   |   +-- node-pools.tf     # System, Data, CPU, GPU node groups
-|   |   +-- variables.tf
-|   |   +-- outputs.tf        # cluster_endpoint, kubeconfig_ca, node_role_arn
-|   +-- rds/
-|   |   +-- main.tf           # PostgreSQL RDS, multi-AZ, parameter groups
-|   |   +-- replicas.tf       # Read replicas
-|   |   +-- variables.tf
-|   |   +-- outputs.tf        # endpoint, port, master_username
-|   +-- qdrant/
-|   |   +-- main.tf           # Qdrant on EKS (via Helm)
-|   |   +-- variables.tf
-|   +-- monitoring/
-|   |   +-- main.tf           # Prometheus + Grafana (via Helm)
-|   |   +-- dashboards.tf     # Grafana dashboard configmaps
-|   |   +-- alerting.tf       # Alertmanager config
-|   |   +-- variables.tf
-|   +-- secrets/
-|   |   +-- main.tf           # External Secrets + Vault/AWS Secrets Manager
-|   |   +-- policies.tf       # IAM policies for secret access
-|   |   +-- variables.tf
-|   +-- dns/
-|       +-- main.tf           # Route53 zones, records
-|       +-- variables.tf
-|
-+-- environments/
-|   +-- dev/
-|   |   +-- main.tf           # Module composition
-|   |   +-- terraform.tfvars  # Dev-specific values
-|   |   +-- backend.tf        # S3 + DynamoDB state
-|   +-- staging/
-|   |   +-- main.tf
-|   |   +-- terraform.tfvars
-|   |   +-- backend.tf
-|   +-- prod/
-|       +-- main.tf
-|       +-- terraform.tfvars
-|       +-- backend.tf
-|
-+-- global/
-    +-- iam.tf                # IAM roles for CI/CD, cross-account access
-    +-- route53.tf            # Shared DNS zones
-    +-- guardduty.tf           # Security services
-```
-
-### 6.2 State Management
-
-| Environment | Backend | Locking | Region |
-|-------------|---------|---------|--------|
-| Dev | S3 + DynamoDB | DynamoDB | us-east-1 |
-| Staging | S3 + DynamoDB | DynamoDB | us-east-1 |
-| Production | S3 + DynamoDB | DynamoDB | us-east-1 |
-| DR (prod) | S3 (separate bucket) | DynamoDB (separate) | us-west-2 |
-
-```
-# backend.tf (example)
-terraform {
-  backend "s3" {
-    bucket         = "openquery-terraform-state"
-    key            = "environments/prod/terraform.tfstate"
-    region         = "us-east-1"
-    dynamodb_table = "openquery-terraform-locks"
-    encrypt        = true
-  }
-}
-```
-
-### 6.3 Workspace Strategy
-
-One workspace per environment (dev/staging/prod). No workspaces for per-tenant infrastructure (tenant infra is dynamically provisioned via the control plane, not Terraform).
-
-### 6.4 Module Versioning
-
-All modules are versioned with SemVer tags. Environments pin specific versions:
-
-```
-module "networking" {
-  source = "git::https://github.com/openquery/infra-modules.git//networking?ref=v1.2.0"
-  ...
-}
-```
+Removed during cleanup — not currently used.
 
 ---
 
@@ -684,11 +404,11 @@ spec:
   data:
   - secretKey: database_url
     remoteRef:
-      key: openquery/prod/database
+      key: schemaintern/prod/database
       property: database_url
   - secretKey: database_password
     remoteRef:
-      key: openquery/prod/database
+      key: schemaintern/prod/database
       property: password
 ```
 
@@ -702,13 +422,13 @@ metadata:
 spec:
   provider:
     vault:
-      server: https://vault.openquery.io:8200
-      path: openquery
+      server: https://vault.schemaintern.io:8200
+      path: schemaintern
       version: v2
       auth:
         kubernetes:
           mountPath: kubernetes
-          role: openquery-secrets
+          role: schemaintern-secrets
 ```
 
 ### 7.5 Secrets in CI/CD
@@ -720,13 +440,13 @@ Secrets are never stored in CI/CD variables. CI/CD pipelines authenticate to Vau
 - name: Authenticate to Vault
   uses: hashicorp/vault-action@v3
   with:
-    url: https://vault.openquery.io:8200
+    url: https://vault.schemaintern.io:8200
     role: ci-role
     method: jwt
-    jwtGithubAudience: openquery
+    jwtGithubAudience: schemaintern
     secrets: |
-      openquery/ci/docker-registry username | DOCKER_USERNAME ;
-      openquery/ci/docker-registry password | DOCKER_PASSWORD
+      schemaintern/ci/docker-registry username | DOCKER_USERNAME ;
+      schemaintern/ci/docker-registry password | DOCKER_PASSWORD
 ```
 
 ---
@@ -743,12 +463,12 @@ All services expose Prometheus metrics at /metrics (port 9100 sidecar or embedde
 ```
 # prometheus-additional.yaml
 scrape_configs:
-- job_name: openquery-services
+- job_name: schemaintern-services
   kubernetes_sd_configs:
   - role: pod
     selectors:
     - role: pod
-      label: app.kubernetes.io/part-of=openquery
+      label: app.kubernetes.io/part-of=schemaintern
   relabel_configs:
   - source_labels: [__meta_kubernetes_pod_label_app]
     target_label: service
@@ -763,18 +483,18 @@ scrape_configs:
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: openquery-servicemonitor
+  name: schemaintern-servicemonitor
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/part-of: openquery
+      app.kubernetes.io/part-of: schemaintern
   endpoints:
   - port: metrics
     interval: 15s
     path: /metrics
   namespaceSelector:
     matchNames:
-    - openquery
+    - schemaintern
 ```
 
 ### 8.4 Alertmanager Configuration
@@ -867,7 +587,7 @@ config:
     [OUTPUT]
         Name loki
         Match kube.*
-        Host loki.openquery.svc
+        Host loki.schemaintern.svc
         Port 3100
         Labels {job="fluentbit"}
         RemoveKeys kubernetes,stream
@@ -902,7 +622,7 @@ loki:
       aws:
         s3: s3://us-east-1/loki-data
         region: us-east-1
-        bucketnames: openquery-loki-data
+        bucketnames: schemaintern-loki-data
 ```
 
 ### 9.4 Log Retention
@@ -951,7 +671,7 @@ processors:
 
 exporters:
   otlp/tempo:
-    endpoint: tempo.openquery.svc:4317
+    endpoint: tempo.schemaintern.svc:4317
     tls:
       insecure: true
 
@@ -971,7 +691,7 @@ tempo:
     trace:
       backend: s3
       s3:
-        bucket: openquery-tempo-traces
+        bucket: schemaintern-tempo-traces
         endpoint: s3.us-east-1.amazonaws.com
         region: us-east-1
   ingester:
@@ -1039,7 +759,7 @@ on:
 
 env:
   REGISTRY: ${{ secrets.ECR_REGISTRY }}
-  K8S_NAMESPACE: openquery
+  K8S_NAMESPACE: schemaintern
 
 jobs:
   test:
@@ -1082,11 +802,11 @@ jobs:
       with:
         role-to-assume: arn:aws:iam::xxx:role/github-actions-eks
         aws-region: us-east-1
-    - run: aws eks update-kubeconfig --name openquery-dev --region us-east-1
+    - run: aws eks update-kubeconfig --name schemaintern-dev --region us-east-1
     - run: |
-        helm upgrade --install openquery infra/charts/openquery \
+        helm upgrade --install schemaintern infra/charts/schemaintern \
           --namespace $K8S_NAMESPACE \
-          -f infra/charts/openquery/values/dev.yaml \
+          -f infra/charts/schemaintern/values/dev.yaml \
           --set images.tag=${{ github.sha }} \
           --wait --timeout 5m
 
@@ -1099,11 +819,11 @@ jobs:
       with:
         role-to-assume: arn:aws:iam::xxx:role/github-actions-eks
         aws-region: us-east-1
-    - run: aws eks update-kubeconfig --name openquery-staging --region us-east-1
+    - run: aws eks update-kubeconfig --name schemaintern-staging --region us-east-1
     - run: |
-        helm upgrade --install openquery infra/charts/openquery \
+        helm upgrade --install schemaintern infra/charts/schemaintern \
           --namespace $K8S_NAMESPACE \
-          -f infra/charts/openquery/values/staging.yaml \
+          -f infra/charts/schemaintern/values/staging.yaml \
           --set images.tag=${{ github.sha }} \
           --wait --timeout 5m
 
@@ -1116,11 +836,11 @@ jobs:
       with:
         role-to-assume: arn:aws:iam::xxx:role/github-actions-eks
         aws-region: us-east-1
-    - run: aws eks update-kubeconfig --name openquery-prod --region us-east-1
+    - run: aws eks update-kubeconfig --name schemaintern-prod --region us-east-1
     - run: |
-        helm upgrade --install openquery infra/charts/openquery \
+        helm upgrade --install schemaintern infra/charts/schemaintern \
           --namespace $K8S_NAMESPACE \
-          -f infra/charts/openquery/values/prod.yaml \
+          -f infra/charts/schemaintern/values/prod.yaml \
           --set images.tag=${{ github.sha }} \
           --wait --timeout 10m
 ```
@@ -1141,15 +861,15 @@ For production, ArgoCD manages the desired state:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: openquery-prod
+  name: schemaintern-prod
 spec:
   destination:
-    namespace: openquery
+    namespace: schemaintern
     server: https://kubernetes.default.svc
   project: default
   source:
-    repoURL: https://github.com/openquery/infra
-    path: infra/charts/openquery
+    repoURL: https://github.com/schemaintern/infra
+    path: infra/charts/schemaintern
     targetRevision: main
     helm:
       valueFiles:
@@ -1340,7 +1060,7 @@ GPU pods scale on custom metrics (inference queue depth). Each GPU node hosts up
 #!/bin/bash
 set -euo pipefail
 
-BACKUP_BUCKET="s3://openquery-backups/${ENVIRONMENT}/postgresql"
+BACKUP_BUCKET="s3://schemaintern-backups/${ENVIRONMENT}/postgresql"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
 # Full backup
@@ -1371,7 +1091,7 @@ done
 ### 13.4 Restore Procedure
 
 ```
-1. Identify backup: aws s3 ls s3://openquery-backups/prod/postgresql/daily/
+1. Identify backup: aws s3 ls s3://schemaintern-backups/prod/postgresql/daily/
 2. Download backup: aws s3 cp s3://.../backup-20260710-120000.dump /tmp/
 3. Restore: pg_restore -h $TARGET_HOST -U $TARGET_USER -d $TARGET_DB \
      --jobs=4 --verbose /tmp/backup-20260710-120000.dump
@@ -1548,7 +1268,7 @@ spec:
   - from:
     - podSelector:
         matchLabels:
-          app.kubernetes.io/part-of: openquery
+          app.kubernetes.io/part-of: schemaintern
     ports:
     - protocol: TCP
       port: 5432
@@ -1945,9 +1665,9 @@ No external network access. All containers and dependencies must be bundled:
 
 ```
 # Bundle structure
-openquery-airgapped-v1.0.0/
+schemaintern-airgapped-v1.0.0/
 +-- images/                    # All container images (docker save)
-|   +-- openquery-services.tar.gz
+|   +-- schemaintern-services.tar.gz
 |   +-- postgres.tar.gz
 |   +-- qdrant.tar.gz
 |   +-- prometheus.tar.gz
@@ -1956,7 +1676,7 @@ openquery-airgapped-v1.0.0/
 |   +-- traefik.tar.gz
 |   +-- cert-manager.tar.gz
 +-- charts/                    # All Helm charts with dependencies vendored
-|   +-- openquery/
+|   +-- schemaintern/
 |   +-- dependencies/
 +-- scripts/
 |   +-- load-images.sh
@@ -1978,7 +1698,7 @@ openquery-airgapped-v1.0.0/
 #!/bin/bash
 set -euo pipefail
 
-echo "=== OpenQuery Air-Gapped Installation ==="
+echo "=== SchemaIntern Air-Gapped Installation ==="
 
 # 1. Load container images
 echo "Loading container images..."
@@ -1995,9 +1715,9 @@ helm install prometheus charts/dependencies/prometheus --namespace monitoring --
 helm install loki charts/dependencies/loki --namespace monitoring
 
 # 3. Deploy application
-echo "Deploying OpenQuery..."
-helm install openquery charts/openquery \
-  --namespace openquery --create-namespace \
+echo "Deploying SchemaIntern..."
+helm install schemaintern charts/schemaintern \
+  --namespace schemaintern --create-namespace \
   -f config/values-air-gapped.yaml
 
 # 4. Configure self-signed CA
@@ -2006,18 +1726,18 @@ kubectl apply -f config/self-signed-ca/
 
 # 5. Verify deployment
 echo "Verifying deployment..."
-kubectl wait --for=condition=ready pod -l app.kubernetes.io/part-of=openquery \
-  --namespace openquery --timeout=300s
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/part-of=schemaintern \
+  --namespace schemaintern --timeout=300s
 
 echo "=== Installation Complete ==="
-echo "Access the application at: https://openquery.internal:443"
+echo "Access the application at: https://schemaintern.internal:443"
 ```
 
 ### 20.4 Offline Helm Dependencies
 
 ```
 # Vendor Helm dependencies for air-gapped deployment
-helm dependency build infra/charts/openquery/
+helm dependency build infra/charts/schemaintern/
 # Vendors all dependencies into charts/ subdirectory
 # No network access needed during install
 ```
@@ -2028,7 +1748,7 @@ Pull-based update model: Customer retrieves release bundle, runs upgrade script.
 
 ```
 # scripts/upgrade.sh v1.0.0 -> v1.1.0
-./scripts/upgrade.sh --bundle openquery-airgapped-v1.1.0.tar.gz
+./scripts/upgrade.sh --bundle schemaintern-airgapped-v1.1.0.tar.gz
 ```
 
 ---
@@ -2176,7 +1896,7 @@ Pull-based update model: Customer retrieves release bundle, runs upgrade script.
 +-------------------------------------------------------------------+
 |  Customer VPC                                                      |
 |                                                                    |
-|  [Customer ALB] -> [OpenQuery Services] -> [Customer RDS/Qdrant]   |
+|  [Customer ALB] -> [SchemaIntern Services] -> [Customer RDS/Qdrant]   |
 |       |                                                           |
 |  [Customer DNS]                                                    |
 |                                                                    |
@@ -2192,7 +1912,7 @@ Pull-based update model: Customer retrieves release bundle, runs upgrade script.
 +-------------------------------------------------------------------+
 |  Customer K8s Cluster                                              |
 |                                                                    |
-|  [nginx Ingress] -> [OpenQuery Pods] -> [PG Operator] [Qdrant]    |
+|  [nginx Ingress] -> [SchemaIntern Pods] -> [PG Operator] [Qdrant]    |
 |       |                                      |                    |
 |  [Customer DNS]                     [Local SSD / SAN Storage]     |
 |                                                                   |

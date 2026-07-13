@@ -1,6 +1,6 @@
 # Executive Summary — Final Release Readiness Audit
 
-**Project:** OpenQuery — Enterprise Data Intelligence Platform (Text-to-SQL SaaS)
+**Project:** SchemaIntern — Enterprise Data Intelligence Platform (Text-to-SQL SaaS)
 **Date:** 2026-07-11
 **Auditor:** Independent Engineering Audit Team
 **Status:** ❌ **FAIL** — Not production-ready

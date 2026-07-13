@@ -21,12 +21,8 @@ Ports used by this project:
 | Port | Service |
 |------|---------|
 | 8100 | Backend API |
-| 8200 | Knowledge Engine API (internal) |
 | 3000 | Frontend |
 | 5432 | PostgreSQL |
-| 6379 | Redis |
-| 6333 | Qdrant HTTP |
-| 6334 | Qdrant gRPC |
 | 9090 | Prometheus |
 | 3001 | Grafana |
 | 4318 | OpenTelemetry Collector |
@@ -46,63 +42,18 @@ Ports used by this project:
 2. **Wrong credentials in `.env`**
    Ensure `POSTGRES_DSN` matches `docker-compose.yml`:
    ```
-   POSTGRES_DSN=postgresql+asyncpg://openquery:openquery_dev@localhost:5432/openquery
+   POSTGRES_DSN=postgresql+asyncpg://schemaintern:schemaintern_dev@localhost:5432/schemaintern
    ```
 
 3. **Database doesn't exist**
    ```bash
-   docker exec -it openquery-postgres psql -U openquery -c "CREATE DATABASE openquery;"
+   docker exec -it schemaintern-postgres psql -U schemaintern -c "CREATE DATABASE schemaintern;"
    ```
 
 4. **Connection pool exhausted**
    Restart the backend service. Increase pool size if persistent:
    ```
    POSTGRES_POOL_SIZE=20
-   ```
-
-## Redis Connection Refused
-
-**Error**: `redis.exceptions.ConnectionError` or `Error 111 connecting to localhost:6379`
-
-**Solutions**:
-
-1. **Redis not running**
-   ```bash
-   docker compose -f infra/docker/docker-compose.yml up -d redis
-   docker compose -f infra/docker/docker-compose.yml ps redis
-   ```
-
-2. **Wrong Redis URL in `.env`**
-   ```
-   REDIS_URL=redis://localhost:6379/0
-   ```
-
-3. **Redis container not healthy**
-   ```bash
-   docker logs openquery-redis
-   ```
-
-## Qdrant Connection Refused
-
-**Error**: `qdrant_client.http.exceptions.UnexpectedResponse` or `Connection refused`
-
-**Solutions**:
-
-1. **Qdrant not running**
-   ```bash
-   docker compose -f infra/docker/docker-compose.yml up -d qdrant
-   docker compose -f infra/docker/docker-compose.yml ps qdrant
-   ```
-
-2. **Wrong Qdrant configuration in `.env`**
-   ```
-   QDRANT_HOST=localhost
-   QDRANT_PORT=6333
-   ```
-
-3. **Verify Qdrant is accessible**
-   ```bash
-   curl http://localhost:6333/collections
    ```
 
 ## Docker Issues
@@ -129,11 +80,11 @@ docker compose -f infra/docker/docker-compose.yml up -d
 
 ```bash
 # Check logs
-docker logs openquery-postgres
+docker compose -f docker-compose.dev.yml logs backend
 
 # Rebuild and restart
-docker compose -f infra/docker/docker-compose.yml down
-docker compose -f infra/docker/docker-compose.yml up -d
+docker compose -f docker-compose.dev.yml down
+docker compose -f docker-compose.dev.yml up -d
 ```
 
 ### Volume Permissions
@@ -142,7 +93,7 @@ docker compose -f infra/docker/docker-compose.yml up -d
 
 **Solution**: Ensure volume directories exist and have correct permissions:
 ```bash
-mkdir -p .docker/postgres .docker/redis .docker/qdrant
+mkdir -p .docker/postgres
 ```
 
 ## uv / Python Issues
@@ -276,7 +227,7 @@ cd backend && uv run uvicorn app.main:create_app --reload --reload-dir app --por
 curl http://localhost:8100/api/v1/health/live
 
 # Check backend is running
-docker ps | grep openquery-backend
+docker ps | grep schemaintern-backend
 
 # Check backend logs
 cd backend && uv run -- logs/app.log

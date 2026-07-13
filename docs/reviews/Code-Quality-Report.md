@@ -1,6 +1,6 @@
 # Code Quality Report
 
-**Project:** OpenQuery
+**Project:** SchemaIntern
 **Date:** 2026-07-11
 **Score:** 70/100 (C)
 **Risk Level:** MEDIUM
@@ -96,7 +96,7 @@ All 146 Python source files under `backend/` (excluding `.venv/`).
 
 ## Code Smells
 
-1. **Singleton pattern for global state** `backend/app/core/database.py`:46-79 — `_redis_pool`, `_qdrant_client` are module-level globals. Makes testing difficult and prevents connection lifecycle management.
+1. **Singleton pattern for global state (removed in cleanup)** `backend/app/core/database.py` previously had `_redis_pool`, `_qdrant_client` as module-level globals. These were removed — the stack uses PostgreSQL only.
 
 2. **Exception swallowing in middleware** `backend/ke/api/middleware/tenant.py` — The `TenantMiddleware` silently continues if `tenant_id` is missing rather than rejecting or warning.
 

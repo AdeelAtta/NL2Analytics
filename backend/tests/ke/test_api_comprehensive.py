@@ -14,7 +14,6 @@ class TestResponseFormat:
             "/v1/ke/schema/tables",
             "/v1/ke/schema/columns",
             "/v1/ke/schema/relationships",
-            "/v1/ke/vector/collections",
         ]
         for ep in endpoints:
             resp = await async_ke_client_auth.get(ep)
@@ -88,19 +87,6 @@ class TestAuthEdgeCases:
             resp = await async_ke_client.request(method, ep)
             assert resp.status_code == 401, f"{method} {ep} should require auth"
 
-    async def test_all_vector_routes_require_auth(
-        self, async_ke_client: httpx.AsyncClient
-    ) -> None:
-        endpoints = [
-            ("GET", "/v1/ke/vector/collections"),
-            ("GET", "/v1/ke/vector/count?tenant_id=t"),
-            ("DELETE", "/v1/ke/vector/collections/t"),
-        ]
-        for method, ep in endpoints:
-            resp = await async_ke_client.request(method, ep)
-            assert resp.status_code == 401, f"{method} {ep} should require auth"
-
-
 class TestPaginationEdgeCases:
     async def test_pagination_meta_present_on_all_list_endpoints(
         self, async_ke_client_auth: httpx.AsyncClient
@@ -143,14 +129,6 @@ class TestPaginationEdgeCases:
 
 
 class TestTenantIsolation:
-    async def test_vector_endpoints_use_tenant_id(
-        self, async_ke_client_auth: httpx.AsyncClient
-    ) -> None:
-        resp = await async_ke_client_auth.get("/v1/ke/vector/count?tenant_id=tenant_abc")
-        assert resp.status_code == 200
-        body = resp.json()
-        assert body["success"] is True
-
     async def test_schema_endpoints_filter_by_tenant_id(
         self, async_ke_client_auth: httpx.AsyncClient
     ) -> None:
@@ -166,27 +144,6 @@ class TestMethodValidation:
     ) -> None:
         resp = await async_ke_client_auth.post("/v1/ke/schema/tenants")
         assert resp.status_code in (405, 422)
-
-    async def test_get_on_post_endpoint_returns_405(
-        self, async_ke_client_auth: httpx.AsyncClient
-    ) -> None:
-        resp = await async_ke_client_auth.get(
-            "/v1/ke/vector/collections/ensure?tenant_id=t"
-        )
-        assert resp.status_code in (405, 404)
-
-
-class TestCollectionInfo:
-    async def test_collection_info_returns_success(
-        self, async_ke_client_auth: httpx.AsyncClient
-    ) -> None:
-        resp = await async_ke_client_auth.get(
-            "/v1/ke/vector/collections/tenant_1/info"
-        )
-        assert resp.status_code == 200
-        body = resp.json()
-        assert body["success"] is True
-
 
 class TestErrorCodes:
     async def test_error_code_message_mapping(
@@ -223,14 +180,6 @@ class TestOpenAPICompleteness:
             "/v1/ke/schema/columns/{col_id}",
             "/v1/ke/schema/relationships",
             "/v1/ke/schema/relationships/{rel_id}",
-            "/v1/ke/vector/collections",
-            "/v1/ke/vector/collections/ensure",
-            "/v1/ke/vector/collections/{tenant_id}",
-            "/v1/ke/vector/collections/{tenant_id}/info",
-            "/v1/ke/vector/points/upsert",
-            "/v1/ke/vector/search",
-            "/v1/ke/vector/points",
-            "/v1/ke/vector/count",
         ]
         for ep in expected_endpoints:
             assert ep in paths, f"Missing endpoint in OpenAPI: {ep}"

@@ -91,7 +91,7 @@
 | Backend Foundation | ✅ Done | FastAPI app factory, config, DI, structlog, health endpoints (live/ready/version), middleware, JWT placeholder, 6 tests passing |
 | Frontend Foundation | ✅ Done | Next.js 15 + TypeScript + Tailwind + shadcn/ui, dashboard shell, auth placeholder, 10 pages, theme |
 | Database Foundation | ✅ Done | Alembic migrations, async SQLAlchemy (pooling, timeout), Redis/Qdrant managers, health checks, DB docker-compose |
-| Docker Compose | ✅ Done | 8 services: postgres, redis, qdrant, backend, frontend, prometheus, grafana |
+| Docker Compose | ✅ Done | postgres, backend, frontend, prometheus, grafana |
 | Dockerfiles | ✅ Done | Multi-stage for backend (python:3.12-slim) and frontend (node:20-alpine) |
 | CI/CD Pipeline | ✅ Done | `.github/workflows/ci.yml` — 6 jobs: lint, typecheck, test, build, security, coverage |
 | Terraform Stubs | ✅ Done | AWS/Azure/GCP providers, variables, outputs, version pinning |

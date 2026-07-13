@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "=== OpenQuery Development Environment Setup ==="
+echo "=== SchemaIntern Development Environment Setup ==="
 
 # --------------- Python / uv ---------------
 if ! command -v uv &> /dev/null; then

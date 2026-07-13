@@ -101,7 +101,7 @@
 | **S-07**: No rate limiting | **VERIFIED BUG** | Zero rate limiting middleware, decorator, or configuration found anywhere in the codebase. |
 | **S-08**: Raw SQL execution without policy chain | **VERIFIED BUG** | `executor.py:21`: `body: dict[str, Any]` lacks Pydantic model validation. The endpoint IS behind `ServiceAuthMiddleware` but does NOT go through `GuardrailStack` policy checks. |
 | **S-09**: Exception details leaked to clients | **VERIFIED BUG** | `error_handler.py:16`: `detail=str(exc)` returns raw exception strings to API consumers. |
-| **S-10**: Default DB credentials in config | **VERIFIED BUG** | `config.py:20`: `"postgresql+asyncpg://openquery:openquery_dev@localhost:5432/openquery"` — default DSN with credentials. |
+| **S-10**: Default DB credentials in config | **VERIFIED BUG** | `config.py:20`: `"postgresql+asyncpg://schemaintern:schemaintern_dev@localhost:5432/schemaintern"` — default DSN with credentials. |
 
 ### MEDIUM (selected)
 
@@ -152,9 +152,9 @@
 | **"Docker image build ❌ (not automated)"** | **FALSE POSITIVE** | CI workflow has `build` job that builds both backend and frontend Docker images using docker/build-push-action with GHA cache. |
 | **"Automated testing in CI ❌"** | **FALSE POSITIVE** | CI `test` job runs `pytest --cov=app --cov-report=xml --cov-report=term-missing` with PostgreSQL, Redis, and Qdrant service containers. |
 | **"Security scanning in CI ❌"** | **FALSE POSITIVE** | CI `security` job runs Trivy filesystem scan, pip-audit, and npm audit. |
-| "Helm chart is minimal template" | **VERIFIED BUG** | Confirmed: `infra/helm/` has minimal chart skeleton. |
-| "K8s manifests lack probes, PDBs, network policies" | **VERIFIED BUG** | K8s manifests exist but lack production-grade configuration. |
-| "Terraform is skeleton" | **VERIFIED BUG** | Confirmed: `infra/terraform/` has minimal structure. |
+| "Helm chart is minimal template" | **WON'T FIX** | Removed — infra directory cleaned up. |
+| "K8s manifests lack probes, PDBs, network policies" | **WON'T FIX** | Removed — infra directory cleaned up. |
+| "Terraform is skeleton" | **WON'T FIX** | Removed — infra directory cleaned up. |
 | "No container registry configured" | **VERIFIED BUG** | CI builds images but no registry push configured. |
 | "No deployment automation" | **VERIFIED BUG** | No CD pipeline, ArgoCD, or deployment script exists. |
 

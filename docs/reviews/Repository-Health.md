@@ -1,6 +1,6 @@
 # Repository Health Report
 
-**Project:** OpenQuery
+**Project:** SchemaIntern
 **Date:** 2026-07-11
 **Status:** ⚠️ ABNORMALITIES FOUND
 **Score:** 55/100

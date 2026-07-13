@@ -7,7 +7,7 @@
 
 ## 1. Overview
 
-This document defines the engineering standards for the OpenQuery platform. All code, infrastructure, documentation, and processes must conform to these standards unless explicitly exempted by an Architecture Decision Record (ADR).
+This document defines the engineering standards for the SchemaIntern platform. All code, infrastructure, documentation, and processes must conform to these standards unless explicitly exempted by an Architecture Decision Record (ADR).
 
 These standards apply to all 10 engineers and AI agents working on the platform. They are designed to be followed without requiring architect consultation.
 
@@ -18,7 +18,7 @@ These standards apply to all 10 engineers and AI agents working on the platform.
 ### 2.1 Repository Layout
 
 ```
-openquery/
+schemaintern/
 ├── .github/
 │   ├── workflows/          # CI/CD pipeline definitions
 │   ├── CODEOWNERS          # Ownership assignments
@@ -60,9 +60,6 @@ openquery/
 │   │   ├── types/               # TypeScript type definitions
 │   │   └── styles/              # Global styles
 │   ├── infrastructure/
-│   │   ├── terraform/           # Terraform modules
-│   │   ├── kubernetes/          # K8s manifests
-│   │   ├── helm/                # Helm charts
 │   │   └── scripts/            # Infrastructure scripts
 │   └── shared/
 │       ├── proto/                # Protocol Buffers
@@ -135,8 +132,7 @@ Each backend service MUST live in its own directory under `src/backend/` with:
 | React components | PascalCase | `QueryEditor.tsx` |
 | Test files | `test_<name>.py` / `<name>.test.ts` | `test_router.py`, `QueryEditor.test.tsx` |
 | Directories | kebab-case | `query-pipeline/` |
-| Terraform modules | snake_case | `eks_cluster/` |
-| K8s manifests | kebab-case | `api-deployment.yaml` |
+| Removed during cleanup | | |
 
 ---
 
@@ -226,12 +222,7 @@ Each backend service MUST live in its own directory under `src/backend/` with:
 
 | Element | Convention | Example |
 |---------|-----------|---------|
-| Terraform modules | snake_case | `eks_cluster` |
-| Terraform variables | snake_case | `cluster_name` |
-| K8s resources | kebab-case | `api-deployment` |
-| K8s labels | kebab-case | `app.kubernetes.io/name` |
-| Helm values | camelCase | `replicaCount` |
-| Docker images | kebab-case | `openquery/public-api` |
+| Docker images | kebab-case | `schemaintern/public-api` |
 | CI/CD jobs | kebab-case | `deploy-production` |
 | Environment variables | UPPER_SNAKE_CASE | `DATABASE_URL` |
 
@@ -577,29 +568,29 @@ Defined in `.github/CODEOWNERS`:
 
 ```
 # Default
-* @openquery/tech-leads
+* @schemaintern/tech-leads
 
 # Backend
-/src/backend/public-api/ @openquery/backend-team
-/src/backend/ke-api/ @openquery/backend-team
-/src/backend/query-pipeline/ @openquery/ml-team
-/src/backend/schema-intel/ @openquery/ml-team
-/src/backend/learning-loop/ @openquery/ml-team
-/src/backend/auth/ @openquery/security-team
+/src/backend/public-api/ @schemaintern/backend-team
+/src/backend/ke-api/ @schemaintern/backend-team
+/src/backend/query-pipeline/ @schemaintern/ml-team
+/src/backend/schema-intel/ @schemaintern/ml-team
+/src/backend/learning-loop/ @schemaintern/ml-team
+/src/backend/auth/ @schemaintern/security-team
 
 # Frontend
-/src/frontend/ @openquery/frontend-team
+/src/frontend/ @schemaintern/frontend-team
 
 # Infrastructure
-/src/infrastructure/ @openquery/infra-team
+/src/infrastructure/ @schemaintern/infra-team
 
 # Documentation
-/docs/ @openquery/tech-leads
-/docs/specifications/ @openquery/architect
-/docs/decisions/ @openquery/architect
+/docs/ @schemaintern/tech-leads
+/docs/specifications/ @schemaintern/architect
+/docs/decisions/ @schemaintern/architect
 
 # CI/CD
-/.github/workflows/ @openquery/infra-team
+/.github/workflows/ @schemaintern/infra-team
 ```
 
 ### 11.2 Ownership Responsibilities
@@ -695,12 +686,7 @@ export default [
 
 ### 12.3 Infrastructure Linting
 
-| Tool | Purpose | Configuration |
-|------|---------|-------------|
-| tflint | Terraform linting | .tflint.hcl |
-| checkov | IaC security scanning | checkov config |
-| kubeconform | K8s manifest validation | CI job |
-| helm lint | Helm chart validation | CI job |
+Removed during cleanup — infrastructure linting tools (Terraform, K8s, Helm) were removed.
 
 ---
 
@@ -714,7 +700,6 @@ export default [
 | TypeScript | prettier | pre-commit, CI |
 | YAML | prettier | pre-commit, CI |
 | Markdown | prettier | pre-commit, CI |
-| Terraform | terraform fmt | pre-commit, CI |
 | Dockerfile | hadolint | CI |
 | Shell scripts | shellcheck + shfmt | pre-commit, CI |
 
@@ -742,22 +727,18 @@ repos:
       - id: check-added-large-files
         args: [--maxkb=500]
       - id: detect-private-key
-  - repo: https://github.com/antonbabenko/pre-commit-terraform
-    rev: v1.92.0
-    hooks:
-      - id: terraform_fmt
-      - id: terraform_tflint
+  # Removed during cleanup: terraform pre-commit hooks were removed
 ```
 
 ### 13.3 Formatter Settings
 
-| Setting | Python | TypeScript | YAML | Markdown | Terraform |
-|---------|--------|-----------|------|----------|----------|
-| Indent | 4 spaces | 2 spaces | 2 spaces | 2 spaces | 2 spaces |
-| Line length | 100 | 100 | 120 | 120 | 100 |
-| Quotes | Double | Single | N/A | N/A | Double |
-| Trailing comma | Always | Always | N/A | N/A | N/A |
-| Semicolons | N/A | Always | N/A | N/A | N/A |
+| Setting | Python | TypeScript | YAML | Markdown |
+|---------|--------|-----------|------|----------|
+| Indent | 4 spaces | 2 spaces | 2 spaces | 2 spaces |
+| Line length | 100 | 100 | 120 | 120 |
+| Quotes | Double | Single | N/A | N/A |
+| Trailing comma | Always | Always | N/A | N/A |
+| Semicolons | N/A | Always | N/A | N/A |
 
 ---
 
@@ -797,8 +778,7 @@ repos:
 
 | Rule | Standard |
 |------|----------|
-| Terraform providers | Version pinning in `versions.tf` |
-| Helm charts | Version pinning in `Chart.yaml` |
+| Removed during cleanup | | |
 | Docker images | Pinned digest (not tags) for production |
 | Base images | Minimal base (distroless preferred), weekly rebuild |
 

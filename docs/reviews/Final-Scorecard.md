@@ -1,6 +1,6 @@
 # Final Scorecard
 
-**Project:** OpenQuery — Enterprise Data Intelligence Platform
+**Project:** SchemaIntern — Enterprise Data Intelligence Platform
 **Date:** 2026-07-11
 **Overall Grade:** ❌ **FAIL** (48.75%)
 

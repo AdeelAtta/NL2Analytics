@@ -27,7 +27,7 @@ Implement the cloud-agnostic Kubernetes infrastructure for the SaaS deployment m
 |----|------|---|---|-----|
 | TASK-126 | Create Dockerfiles for all services | P0 | EP-001 | L | ✅ done (backend + frontend multi-stage) |
 | TASK-127 | Create K8s manifests for dev environment | P0 | TASK-126 | XL | ✅ done (backend + frontend + ingress + network policies + HPA + configmap) |
-| TASK-128 | Create Helm charts for reusable deployment | P1 | TASK-127 | L | ✅ done (openquery chart with deployment, service, configmap, HPA) |
+| TASK-128 | Create Helm charts for reusable deployment | P1 | TASK-127 | L | ✅ done (schemaintern chart with deployment, service, configmap, HPA) |
 | TASK-129 | Create Terraform modules (cloud-agnostic) | P0 | TASK-126 | XL | 🟡 stubs exist (main.tf, outputs, variables, versions) |
 | TASK-130 | Configure K8s namespaces and network policies | P0 | TASK-127 | M | ✅ done (default-deny + backend ingress policy) |
 | TASK-131 | Implement HPA configurations | P1 | TASK-127 | M | ✅ done (CPU-based HPA for backend) |

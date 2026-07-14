@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from uuid import UUID
 from typing import Any
 
 
@@ -12,6 +13,8 @@ def _serialize_row(row: dict[str, Any]) -> dict[str, Any]:
             cleaned[k] = v.isoformat()
         elif isinstance(v, Decimal):
             cleaned[k] = float(v)
+        elif isinstance(v, UUID):
+            cleaned[k] = str(v)
         else:
             cleaned[k] = v
     return cleaned

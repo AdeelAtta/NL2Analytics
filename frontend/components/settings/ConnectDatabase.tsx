@@ -27,6 +27,7 @@ export function ConnectDatabase() {
   const token = useAuthStore((s) => s.token);
   const addToast = useUIStore((s) => s.addToast);
 
+  const [connString, setConnString] = useState("");
   const [connName, setConnName] = useState("");
   const [dbType, setDbType] = useState("postgresql");
   const [host, setHost] = useState("localhost");
@@ -85,16 +86,28 @@ export function ConnectDatabase() {
     setTesting(false);
   };
 
+  const parseConnString = (str: string) => {
+    try {
+      const url = new URL(str);
+      const proto = url.protocol.replace(":", "");
+      setDbType(proto === "postgresql" || proto === "postgres" ? "postgresql" : proto);
+      setHost(url.hostname);
+      setPort(url.port || "5432");
+      setDbName(url.pathname.replace(/^\//, ""));
+      setUsername(url.username);
+      setPassword(url.password || "");
+      setConnName(url.pathname.replace(/^\//, "") || "My Database");
+      const sslMode = url.searchParams.get("sslmode");
+      setSsl(sslMode === "require" || sslMode === "verify-full" || sslMode === "verify-ca");
+      addToast("Connection string parsed — review and click Sync Schema", "info");
+    } catch {
+      addToast("Invalid connection string", "error");
+    }
+  };
+
   const handleDemo = () => {
-    setConnName("Chinook Demo");
-    setDbType("postgresql");
-    setHost("postgres");
-    setPort("5432");
-    setDbName("chinook");
-    setUsername("postgres");
-    setPassword("postgres");
-    setSsl(false);
-    addToast("Demo database details filled — click Sync Schema to import", "info");
+    parseConnString("postgresql://neondb_owner:npg_QNaviT4BOF3l@ep-cold-feather-ah9o0mqs-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require");
+    addToast("Periodic Table demo DB filled — click Sync Schema to import", "info");
   };
 
   const handleSync = async () => {
@@ -184,7 +197,17 @@ export function ConnectDatabase() {
           <CardDescription>Connect to your database to query your real schema</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="conn-string">Connection String</Label>
+            <div className="flex gap-2">
+              <Input id="conn-string" value={connString} onChange={(e) => setConnString(e.target.value)} placeholder="postgresql://user:pass@host:5432/db?sslmode=require" className="flex-1" />
+              <Button variant="secondary" size="sm" onClick={() => parseConnString(connString)} disabled={!connString}>
+                Parse
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="conn-name">Connection Name</Label>
               <Input id="conn-name" value={connName} onChange={(e) => setConnName(e.target.value)} placeholder="My Production DB" />
@@ -229,7 +252,7 @@ export function ConnectDatabase() {
 
           <div className="mt-4 flex gap-2">
             <Button variant="secondary" onClick={handleDemo} disabled={!token}>
-              Try Chinook Demo
+              Try Periodic Table Demo
             </Button>
             <Button variant="outline" onClick={handleTest} disabled={testing || !token}>
               {testing ? "Testing..." : "Test Connection"}
